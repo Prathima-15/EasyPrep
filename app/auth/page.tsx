@@ -47,14 +47,21 @@ export default function AuthPage() {
           <SignUpForm onToggleMode={() => setIsSignIn(true)} />
         )}
 
-        {/* Admin Portal Link */}
-        <div className="mt-6 text-center">
+        {/* Coordinator/Admin Login Links */}
+        <div className="mt-6 text-center space-y-2">
           <p className="text-sm text-gray-600">
-            Administrator?{" "}
-            <button 
-              type="button" 
-              onClick={() => router.push("/admin/signin")} 
-              className="text-red-600 hover:text-red-700 font-medium underline"
+            <button
+              type="button"
+              onClick={() => router.push("/auth/coordinator-login")}
+              className="text-green-600 hover:text-green-700 font-medium underline mx-2"
+            >
+              Coordinator Login
+            </button>
+            |
+            <button
+              type="button"
+              onClick={() => router.push("/admin/signin")}
+              className="text-red-600 hover:text-red-700 font-medium underline ml-2"
             >
               Admin Portal
             </button>
