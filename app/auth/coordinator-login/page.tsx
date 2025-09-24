@@ -53,6 +53,13 @@ export default function CoordinatorLogin() {
         />
         <button type="submit" className="w-full bg-red-600 text-white py-2 rounded font-semibold">Login</button>
         {error && <p className="mt-4 text-red-600 text-center">{error}</p>}
+
+        {/* Demo credentials for easy login */}
+        <div className="mt-6 text-center bg-gray-100 p-3 rounded">
+          <p className="text-sm text-gray-700 font-semibold mb-1">Demo Coordinator Login:</p>
+          <p className="text-xs text-gray-600">Email: <span className="font-mono">coordinator@example.com</span></p>
+          <p className="text-xs text-gray-600">Password: <span className="font-mono">password123</span></p>
+        </div>
       </form>
     </div>
   )

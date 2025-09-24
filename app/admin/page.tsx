@@ -100,7 +100,7 @@ export default function AdminDashboard() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Shield className="h-8 w-8 text-red-600" />
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Coordinator Admin Panel</h1>
         </div>
         <p className="text-muted-foreground">Monitor and manage the EasyPrep platform</p>
       </div>

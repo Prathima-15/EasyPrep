@@ -6,14 +6,24 @@ import { useAuth } from "@/contexts/auth-context"
 import { AnalyticsOverview } from "@/components/dashboard/analytics-overview"
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/auth")
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push("/auth")
+      } else {
+        // Role-based routing (swapped)
+        if (user?.role === "admin") {
+          router.replace("/dashboard/coordinator")
+        } else if (user?.role === "moderator") {
+          router.replace("/admin")
+        }
+        // For students, stay on the main dashboard
+      }
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, isLoading, user, router])
 
   if (isLoading) {
     return (
@@ -27,5 +37,11 @@ export default function DashboardPage() {
     return null
   }
 
-  return <AnalyticsOverview />
+  // Only show student dashboard for student role
+  if (user?.role === "student") {
+    return <AnalyticsOverview />
+  }
+
+  // For admin/moderator roles, they should be redirected by the useEffect above
+  return null
 }

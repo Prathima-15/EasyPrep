@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
 
 interface SignInFormProps {
   onToggleMode: () => void
@@ -17,18 +21,19 @@ interface SignInFormProps {
 export function SignInForm({ onToggleMode }: SignInFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const { signIn, isLoading } = useAuth()
+  const { signIn, isLoading, isAuthenticated } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     try {
       await signIn(email, password)
       toast({
         title: "Success",
         description: "Signed in successfully!",
       })
+      // Do not redirect here; let useEffect handle it
     } catch (error) {
       toast({
         title: "Error",
@@ -37,6 +42,12 @@ export function SignInForm({ onToggleMode }: SignInFormProps) {
       })
     }
   }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard")
+    }
+  }, [isAuthenticated, router])
 
   return (
     <Card className="w-full max-w-md">

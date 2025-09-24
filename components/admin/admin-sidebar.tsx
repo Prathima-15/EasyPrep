@@ -80,7 +80,7 @@ export function AdminSidebar() {
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-sidebar-foreground">EasyPrep</span>
-              <Badge variant="destructive" className="text-xs w-fit">Admin Panel</Badge>
+              <Badge variant="destructive" className="text-xs w-fit">Coordinator Panel</Badge>
             </div>
           </div>
 
@@ -95,7 +95,7 @@ export function AdminSidebar() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                <Badge variant="outline" className="text-xs mt-1">Administrator</Badge>
+                <Badge variant="outline" className="text-xs mt-1">Coordinator</Badge>
               </div>
             </div>
           </div>

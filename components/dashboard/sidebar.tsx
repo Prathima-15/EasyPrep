@@ -26,12 +26,35 @@ export function DashboardSidebar() {
   const pathname = usePathname()
 
   const navigationItems = [
-    { name: "Home", href: "/dashboard", icon: Home },
-    { name: "Companies", href: "/dashboard/companies", icon: Building2 },
-    { name: "My Interview Questions", href: "/dashboard/questions", icon: FileQuestion },
-    { name: "Difficulty Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-    { name: "Saved Questions", href: "/dashboard/saved", icon: Bookmark },
-    { name: "Settings", href: "/dashboard/settings", icon: Settings },
+    // Common items for all roles
+    { name: "Home", href: "/dashboard", icon: Home, roles: ["student", "moderator", "admin"] },
+    
+    // Student-specific items
+    ...(user?.role === "student" ? [
+      { name: "Companies", href: "/dashboard/companies", icon: Building2, roles: ["student"] },
+      { name: "My Interview Questions", href: "/dashboard/questions", icon: FileQuestion, roles: ["student"] },
+      { name: "Difficulty Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["student"] },
+      { name: "Saved Questions", href: "/dashboard/saved", icon: Bookmark, roles: ["student"] },
+    ] : []),
+    
+    // Coordinator-specific items (now shows admin features)
+    ...(user?.role === "moderator" ? [
+      { name: "Admin Panel", href: "/admin", icon: Home, roles: ["moderator"] },
+      { name: "Question Management", href: "/admin/questions", icon: FileQuestion, roles: ["moderator"] },
+      { name: "User Management", href: "/admin/users", icon: Building2, roles: ["moderator"] },
+      { name: "Analytics", href: "/admin/analytics", icon: BarChart3, roles: ["moderator"] },
+    ] : []),
+    
+    // Admin-specific items (now shows coordinator features)  
+    ...(user?.role === "admin" ? [
+      { name: "Coordinator Dashboard", href: "/dashboard/coordinator", icon: Home, roles: ["admin"] },
+      { name: "Review Questions", href: "/admin/questions", icon: FileQuestion, roles: ["admin"] },
+      { name: "Student Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["admin"] },
+      { name: "Manage Users", href: "/admin/users", icon: Building2, roles: ["admin"] },
+    ] : []),
+    
+    // Settings for all roles
+    { name: "Settings", href: "/dashboard/settings", icon: Settings, roles: ["student", "moderator", "admin"] },
   ]
 
   const handleSignOut = async () => {

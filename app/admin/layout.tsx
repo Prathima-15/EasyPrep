@@ -22,8 +22,8 @@ export default function AdminLayout({
     if (!isSigninPage && !isLoading) {
       if (!isAuthenticated) {
         router.push("/admin/signin")
-      } else if (user?.role !== "admin") {
-        // Redirect non-admin users to student dashboard
+      } else if (user?.role !== "moderator") {
+        // Redirect non-coordinator users to student dashboard
         router.push("/dashboard")
       }
     }
@@ -42,7 +42,7 @@ export default function AdminLayout({
     )
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || user?.role !== "moderator") {
     return null
   }
 

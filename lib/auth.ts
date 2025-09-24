@@ -30,6 +30,14 @@ export const mockUsers: User[] = [
     name: "Admin User",
     role: "admin",
   },
+  {
+    id: "3",
+    email: "coordinator@example.com",
+    name: "Jane Smith",
+    college: "MIT",
+    branch: "ECE",
+    role: "moderator",
+  },
 ]
 
 export const signIn = async (email: string, password: string): Promise<User> => {
