@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Label } from "@/components/ui/label"
 import { 
   Search, 
   Filter, 
@@ -25,7 +26,10 @@ import {
   RefreshCw,
   Settings,
   TrendingUp,
-  Users
+  Users,
+  Upload,
+  FileText,
+  Download
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -63,6 +67,15 @@ export default function EligibilityMonitor() {
   const [searchQuery, setSearchQuery] = useState("")
   const [eligibilityFilter, setEligibilityFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadResults, setUploadResults] = useState<{
+    total: number
+    processed: number
+    eligible: number
+    ineligible: number
+    errors: string[]
+  } | null>(null)
   const { toast } = useToast()
 
   // Mock eligibility data
@@ -226,6 +239,89 @@ export default function EligibilityMonitor() {
     return matchesSearch && matchesEligibility && matchesStatus
   })
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Check if file is Excel format
+      const validTypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.csv'
+      ]
+      
+      if (file.type === 'text/csv' || validTypes.includes(file.type) || 
+          file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
+        setUploadedFile(file)
+        toast({
+          title: "File Selected",
+          description: `${file.name} ready for upload`,
+        })
+      } else {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select an Excel file (.xlsx, .xls) or CSV file",
+          variant: "destructive"
+        })
+      }
+    }
+  }
+
+  const handleProcessExcel = async () => {
+    if (!uploadedFile) return
+
+    setIsUploading(true)
+    try {
+      // Mock processing - replace with real Excel processing logic
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Mock results
+      const results = {
+        total: 150,
+        processed: 147,
+        eligible: 134,
+        ineligible: 13,
+        errors: [
+          "Row 25: Missing email address",
+          "Row 48: Invalid college format",
+          "Row 92: Duplicate entry"
+        ]
+      }
+      
+      setUploadResults(results)
+      toast({
+        title: "Excel Processing Complete",
+        description: `Processed ${results.processed} students. ${results.eligible} eligible, ${results.ineligible} ineligible.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to process Excel file. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleDownloadTemplate = () => {
+    // Mock template download - replace with real template file
+    const csvContent = "Name,Email,College,Branch,Student_ID,Year\nJohn Doe,john.doe@college.edu,MIT,Computer Science,CS2023001,3\nJane Smith,jane.smith@college.edu,MIT,Electrical Engineering,EE2023002,2"
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'student_eligibility_template.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    toast({
+      title: "Template Downloaded",
+      description: "Excel template has been downloaded successfully",
+    })
+  }
+
   const getEligibilityBadge = (status: string) => {
     switch (status) {
       case "eligible":
@@ -344,6 +440,136 @@ export default function EligibilityMonitor() {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{restrictedCount}</div>
             <Progress value={(restrictedCount / mockUsers.length) * 100} className="mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bulk Student Management */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Bulk Student Upload
+            </CardTitle>
+            <CardDescription>
+              Upload Excel file to add multiple eligible students at once
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="excel-upload">Choose Excel File</Label>
+              <Input
+                id="excel-upload"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-muted-foreground">
+                Supported formats: .xlsx, .xls, .csv (Max 10MB)
+              </p>
+            </div>
+            
+            {uploadedFile && (
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm font-medium">{uploadedFile.name}</span>
+                  </div>
+                  <Badge variant="outline">{(uploadedFile.size / 1024).toFixed(1)} KB</Badge>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleDownloadTemplate} 
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download Template
+              </Button>
+              <Button 
+                onClick={handleProcessExcel}
+                disabled={!uploadedFile || isUploading}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {isUploading ? "Processing..." : "Process File"}
+              </Button>
+            </div>
+
+            {uploadResults && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <h4 className="font-medium">Upload Results</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <div>Total Students: <span className="font-medium">{uploadResults.total}</span></div>
+                    <div>Processed: <span className="font-medium">{uploadResults.processed}</span></div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-green-600">Eligible: <span className="font-medium">{uploadResults.eligible}</span></div>
+                    <div className="text-red-600">Ineligible: <span className="font-medium">{uploadResults.ineligible}</span></div>
+                  </div>
+                </div>
+                {uploadResults.errors.length > 0 && (
+                  <div className="space-y-2">
+                    <h5 className="text-sm font-medium text-red-600">Processing Errors:</h5>
+                    <ul className="text-xs text-red-600 space-y-1">
+                      {uploadResults.errors.map((error, index) => (
+                        <li key={index} className="flex items-start gap-1">
+                          <span className="text-red-400">•</span>
+                          {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Upload Instructions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3 text-sm">
+              <div>
+                <h4 className="font-medium mb-2">Required Columns:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• <strong>Name</strong> - Full name of the student</li>
+                  <li>• <strong>Email</strong> - Valid email address</li>
+                  <li>• <strong>College</strong> - Institution name</li>
+                  <li>• <strong>Branch</strong> - Department/Branch</li>
+                  <li>• <strong>Student_ID</strong> - Unique student identifier</li>
+                  <li>• <strong>Year</strong> - Current academic year</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-2">File Requirements:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Maximum file size: 10MB</li>
+                  <li>• Supported formats: .xlsx, .xls, .csv</li>
+                  <li>• First row should contain column headers</li>
+                  <li>• No empty rows in between data</li>
+                </ul>
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-800">
+                  <strong>Tip:</strong> Download the template file to see the correct format and column structure.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
