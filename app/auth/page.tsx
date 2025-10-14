@@ -77,7 +77,7 @@ export default function AuthPage() {
                       await signIn(coordinatorEmail, coordinatorPassword);
                       const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
                       if (user?.role === "moderator") {
-                        router.replace("/admin");
+                        router.replace("/coordinator");
                       } else {
                         setCoordinatorError("Not a coordinator account");
                       }

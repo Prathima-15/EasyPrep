@@ -26,7 +26,7 @@ export default function CoordinatorSignup() {
   const [countdown, setCountdown] = useState(0)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  const departments = ["IT", "CSE", "ECE", "CIVIL", "EEE", "MECH", "MCT", "BME", "Placement"]
+  const departments = ["IT", "CSE", "ECE", "CIVIL", "EEE", "MECH", "MCT", "BME", "FT", "Placement"]
 
   useEffect(() => {
     if (timeRemaining > 0 && showOtpModal) {

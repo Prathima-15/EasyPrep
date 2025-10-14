@@ -13,30 +13,28 @@ import {
   Users,
   FileQuestion,
   Building2,
-  BookOpen,
   BarChart3,
   FileText,
   Settings,
   LogOut,
   Menu,
   X,
-  AlertTriangle,
 } from "lucide-react"
 
-export function AdminSidebar() {
+export function CoordinatorSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
   const navigationItems = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "User Management", href: "/admin/users", icon: Users },
-    { name: "Question Management", href: "/admin/questions", icon: FileQuestion },
-    { name: "Company Management", href: "/admin/companies", icon: Building2 },
-    { name: "Analytics & Insights", href: "/admin/analytics", icon: BarChart3 },
-    { name: "Audit Logs", href: "/admin/audit", icon: FileText },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+    { name: "Dashboard", href: "/coordinator", icon: LayoutDashboard },
+    { name: "User Management", href: "/coordinator/users", icon: Users },
+    { name: "Question Management", href: "/coordinator/questions", icon: FileQuestion },
+    { name: "Company Management", href: "/coordinator/companies", icon: Building2 },
+    { name: "Analytics & Insights", href: "/coordinator/analytics", icon: BarChart3 },
+    { name: "Audit Logs", href: "/coordinator/audit", icon: FileText },
+    { name: "Settings", href: "/coordinator/settings", icon: Settings },
   ]
 
   const handleSignOut = async () => {
@@ -71,23 +69,23 @@ export function AdminSidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center space-x-2 p-6 border-b border-sidebar-border bg-red-50">
+          <div className="flex items-center space-x-2 p-6 border-b border-sidebar-border bg-indigo-50">
             <div className="relative">
-              <Shield className="h-8 w-8 text-red-600" />
+              <Shield className="h-8 w-8 text-indigo-600" />
               <Sparkles className="h-4 w-4 text-amber-500 absolute -top-1 -right-1" />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-sidebar-foreground">EasyPrep</span>
-              <Badge variant="destructive" className="text-xs w-fit">Coordinator Panel</Badge>
+              <Badge variant="default" className="text-xs w-fit bg-indigo-600">Coordinator</Badge>
             </div>
           </div>
 
-          {/* Admin Profile */}
-          <div className="p-6 border-b border-sidebar-border bg-red-50/50">
+          {/* Coordinator Profile */}
+          <div className="p-6 border-b border-sidebar-border bg-indigo-50/50">
             <div className="flex items-center space-x-3">
               <Avatar>
-                <AvatarFallback className="bg-red-600 text-white">
-                  {user?.name?.charAt(0).toUpperCase() || "A"}
+                <AvatarFallback className="bg-indigo-600 text-white">
+                  {user?.name?.charAt(0).toUpperCase() || "C"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -108,11 +106,11 @@ export function AdminSidebar() {
                   onClick={() => handleNavigation(item.href)}
                   className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
                     isActive
-                      ? "bg-red-100 text-red-800 border border-red-200"
+                      ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   }`}
                 >
-                  <item.icon className={`h-5 w-5 ${isActive ? "text-red-600" : ""}`} />
+                  <item.icon className={`h-5 w-5 ${isActive ? "text-indigo-600" : ""}`} />
                   <span className="text-sm font-medium">{item.name}</span>
                 </button>
               )
@@ -124,7 +122,7 @@ export function AdminSidebar() {
             <Button
               variant="ghost"
               onClick={handleSignOut}
-              className="w-full justify-start text-sidebar-foreground hover:bg-red-100 hover:text-red-800"
+              className="w-full justify-start text-sidebar-foreground hover:bg-indigo-100 hover:text-indigo-800"
             >
               <LogOut className="h-5 w-5 mr-3" />
               Sign Out

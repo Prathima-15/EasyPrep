@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpen, Sparkles, User, Mail, Lock, IdCard, ArrowLeft, Shield, Clock, CheckCircle, RefreshCw } from "lucide-react"
+import { BookOpen, Sparkles, User, Mail, Lock, IdCard, ArrowLeft, Shield, Clock, CheckCircle, RefreshCw, Building2 } from "lucide-react"
 
 export default function StudentSignup() {
   const router = useRouter()
@@ -10,6 +10,7 @@ export default function StudentSignup() {
     name: "",
     username: "", // Register Number
     email: "",    // College Email
+    department: "", // Department
     password: "",
     confirmPassword: ""
   })
@@ -41,7 +42,7 @@ export default function StudentSignup() {
     }
   }, [countdown])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     // Clear error when user starts typing
@@ -74,6 +75,11 @@ export default function StudentSignup() {
       newErrors.email = "College email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address"
+    }
+
+    // Department validation
+    if (!formData.department) {
+      newErrors.department = "Department is required"
     }
 
     // Password validation
@@ -192,6 +198,7 @@ export default function StudentSignup() {
         name: formData.name,
         username: formData.username,
         email: formData.email,
+        department: formData.department,
         password: formData.password,
         role: "student",
         verified: true,
@@ -330,6 +337,38 @@ export default function StudentSignup() {
                 required
               />
               {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            {/* Department */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                <Building2 className="w-4 h-4 text-indigo-600" />
+                Department
+              </label>
+              <select
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                  errors.department ? 'border-red-500' : 'border-gray-300'
+                }`}
+                required
+              >
+                <option value="">Select your department</option>
+                <option value="IT">IT</option>
+                <option value="CSE">CSE</option>
+                <option value="EEE">EEE</option>
+                <option value="CIVIL">CIVIL</option>
+                <option value="FT">FT</option>
+                <option value="BME">BME</option>
+                <option value="ECE">ECE</option>
+                <option value="MECH">MECH</option>
+                <option value="MCT">MCT</option>
+                <option value="ADS">ADS</option>
+                <option value="CSD">CSD</option>
+                <option value="AIML">AIML</option>
+              </select>
+              {errors.department && <p className="text-red-500 text-xs mt-1">{errors.department}</p>}
             </div>
 
             {/* Password */}

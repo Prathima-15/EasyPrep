@@ -4,39 +4,30 @@ import type React from "react"
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { CoordinatorSidebar } from "@/components/coordinator/coordinator-sidebar"
 
-export default function AdminLayout({
+export default function CoordinatorLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
-  const pathname = usePathname()
-
-  // Skip authentication checks for signin page
-  const isSigninPage = pathname === "/admin/signin"
 
   useEffect(() => {
-    if (!isSigninPage && !isLoading) {
+    if (!isLoading) {
       if (!isAuthenticated) {
-        router.push("/admin/signin")
-      } else if (user?.role !== "admin") {
-        // Redirect non-admin users to their respective dashboards
-        if (user?.role === "moderator") {
-          router.push("/coordinator")
+        router.push("/auth?tab=coordinator")
+      } else if (user?.role !== "moderator") {
+        // Redirect non-coordinator users to their respective dashboards
+        if (user?.role === "admin") {
+          router.push("/admin")
         } else {
           router.push("/dashboard")
         }
       }
     }
-  }, [isAuthenticated, isLoading, user, router, isSigninPage])
-
-  // For signin page, just render children without layout
-  if (isSigninPage) {
-    return <>{children}</>
-  }
+  }, [isAuthenticated, isLoading, user, router])
 
   if (isLoading) {
     return (
@@ -46,13 +37,13 @@ export default function AdminLayout({
     )
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || user?.role !== "moderator") {
     return null
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminSidebar />
+      <CoordinatorSidebar />
       <main className="lg:ml-64 p-6 lg:p-8">{children}</main>
     </div>
   )

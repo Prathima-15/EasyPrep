@@ -48,6 +48,7 @@ export function DashboardSidebar() {
     // Admin-specific items (now shows coordinator features)  
     ...(user?.role === "admin" ? [
       { name: "Coordinator Dashboard", href: "/dashboard/coordinator", icon: Home, roles: ["admin"] },
+      { name: "Company Management", href: "/dashboard/coordinator/companies", icon: Building2, roles: ["admin"] },
       { name: "Review Questions", href: "/admin/questions", icon: FileQuestion, roles: ["admin"] },
       { name: "Student Analytics", href: "/dashboard/analytics", icon: BarChart3, roles: ["admin"] },
       { name: "Manage Users", href: "/admin/users", icon: Building2, roles: ["admin"] },
