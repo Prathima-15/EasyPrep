@@ -1,19 +1,37 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { useAuth } from "@/contexts/auth-context"
-import { BookOpen, Sparkles, Shield } from "lucide-react"
+import { BookOpen, Sparkles, Shield, UserCog } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 
 
 export default function AuthPage() {
+  const searchParams = useSearchParams()
   const [tab, setTab] = useState("student")
+  
+  useEffect(() => {
+    const tabParam = searchParams.get("tab")
+    if (tabParam && ["student", "coordinator", "admin"].includes(tabParam)) {
+      setTab(tabParam)
+    }
+  }, [searchParams])
   const { signIn } = useAuth()
   const router = useRouter()
+  const [coordinatorEmail, setCoordinatorEmail] = useState("")
+  const [coordinatorPassword, setCoordinatorPassword] = useState("")
+  const [adminEmail, setAdminEmail] = useState("")
+  const [adminPassword, setAdminPassword] = useState("")
   const [coordinatorError, setCoordinatorError] = useState("")
   const [adminError, setAdminError] = useState("")
+  const [coordinatorLoading, setCoordinatorLoading] = useState(false)
+  const [adminLoading, setAdminLoading] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -42,94 +60,138 @@ export default function AuthPage() {
               </div>
             </TabsContent>
             <TabsContent value="coordinator">
-              <form className="w-full" onSubmit={async (e) => {
-                e.preventDefault();
-                setCoordinatorError("");
-                const email = (e.currentTarget.elements.namedItem('email') as HTMLInputElement).value;
-                const password = (e.currentTarget.elements.namedItem('password') as HTMLInputElement).value;
-                try {
-                  await signIn(email, password);
-                  const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
-                  if (user?.role === "moderator") {
-                    router.replace("/admin");
-                  } else {
-                    setCoordinatorError("Not a coordinator account");
-                  }
-                } catch (err: any) {
-                  setCoordinatorError(err.message || "Login failed");
-                }
-              }}>
-                <div className="flex items-center justify-center mb-6">
-                  <Shield className="h-8 w-8 text-red-600" />
-                  <span className="ml-2 text-2xl font-bold">Coordinator Login</span>
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  className="w-full mb-4 p-2 border rounded"
-                  required
-                />
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  className="w-full mb-6 p-2 border rounded"
-                  required
-                />
-                <button type="submit" className="w-full border font-semibold py-2 rounded bg-white hover:bg-gray-100 transition" style={{ borderColor: 'var(--primary)' }}>Login</button>
-                {coordinatorError && <p className="mt-4 text-red-600 text-center text-sm">{coordinatorError}</p>}
-                <div className="mt-6 text-center bg-gray-100 p-3 rounded">
-                  <p className="text-sm text-gray-700 font-semibold mb-1">Demo Coordinator Login (Admin Panel Access):</p>
-                  <p className="text-xs text-gray-600">Email: <span className="font-mono">coordinator@example.com</span></p>
-                  <p className="text-xs text-gray-600">Password: <span className="font-mono">password123</span></p>
-                </div>
-              </form>
+              <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <Shield className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-indigo-600">Coordinator Login</CardTitle>
+                  <CardDescription>Access the admin panel and manage student data</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    setCoordinatorError("");
+                    setCoordinatorLoading(true);
+                    try {
+                      await signIn(coordinatorEmail, coordinatorPassword);
+                      const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
+                      if (user?.role === "moderator") {
+                        router.replace("/admin");
+                      } else {
+                        setCoordinatorError("Not a coordinator account");
+                      }
+                    } catch (err: any) {
+                      setCoordinatorError(err.message || "Login failed");
+                    } finally {
+                      setCoordinatorLoading(false);
+                    }
+                  }} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="coordinator-username">Username</Label>
+                      <Input
+                        id="coordinator-username"
+                        type="text"
+                        placeholder="Enter your username"
+                        value={coordinatorEmail}
+                        onChange={(e) => setCoordinatorEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="coordinator-password">Password</Label>
+                      <Input
+                        id="coordinator-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={coordinatorPassword}
+                        onChange={(e) => setCoordinatorPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {coordinatorError && <p className="text-sm text-red-500">{coordinatorError}</p>}
+                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={coordinatorLoading}>
+                      {coordinatorLoading ? "Signing In..." : "Sign In"}
+                    </Button>
+                  </form>
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Don't have an account?{" "}
+                      <button type="button" onClick={() => router.push("/auth/coordinator-signup")} className="text-indigo-600 hover:text-indigo-700 font-medium">
+                        Sign up
+                      </button>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">Demo: <span className="font-mono">coordinator@example.com</span> / <span className="font-mono">password123</span></p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
             <TabsContent value="admin">
-              <form className="w-full" onSubmit={async (e) => {
-                e.preventDefault();
-                setAdminError("");
-                const email = (e.currentTarget.elements.namedItem('email') as HTMLInputElement).value;
-                const password = (e.currentTarget.elements.namedItem('password') as HTMLInputElement).value;
-                try {
-                  await signIn(email, password);
-                  const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
-                  if (user?.role === "admin") {
-                    router.replace("/dashboard/coordinator");
-                  } else {
-                    setAdminError("Not an admin account");
-                  }
-                } catch (err: any) {
-                  setAdminError(err.message || "Login failed");
-                }
-              }}>
-                <div className="flex items-center justify-center mb-6">
-                  <Shield className="h-8 w-8 text-red-600" />
-                  <span className="ml-2 text-2xl font-bold">Admin Login</span>
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  className="w-full mb-4 p-2 border rounded"
-                  required
-                />
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  className="w-full mb-6 p-2 border rounded"
-                  required
-                />
-                <button type="submit" className="w-full border font-semibold py-2 rounded bg-white hover:bg-gray-100 transition" style={{ borderColor: 'var(--primary)' }}>Login</button>
-                {adminError && <p className="mt-4 text-red-600 text-center text-sm">{adminError}</p>}
-                <div className="mt-6 text-center bg-gray-100 p-3 rounded">
-                  <p className="text-sm text-gray-700 font-semibold mb-1">Demo Admin Login (Coordinator Dashboard Access):</p>
-                  <p className="text-xs text-gray-600">Email: <span className="font-mono">admin@easyprep.com</span></p>
-                  <p className="text-xs text-gray-600">Password: <span className="font-mono">password123</span></p>
-                </div>
-              </form>
+              <Card className="w-full max-w-md">
+                <CardHeader className="text-center">
+                  <div className="flex items-center justify-center mb-2">
+                    <UserCog className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold text-indigo-600">Admin Login</CardTitle>
+                  <CardDescription>Access coordinator dashboard and system settings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    setAdminError("");
+                    setAdminLoading(true);
+                    try {
+                      await signIn(adminEmail, adminPassword);
+                      const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
+                      if (user?.role === "admin") {
+                        router.replace("/dashboard/coordinator");
+                      } else {
+                        setAdminError("Not an admin account");
+                      }
+                    } catch (err: any) {
+                      setAdminError(err.message || "Login failed");
+                    } finally {
+                      setAdminLoading(false);
+                    }
+                  }} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-username">Username</Label>
+                      <Input
+                        id="admin-username"
+                        type="text"
+                        placeholder="Enter your username"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admin-password">Password</Label>
+                      <Input
+                        id="admin-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {adminError && <p className="text-sm text-red-500">{adminError}</p>}
+                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={adminLoading}>
+                      {adminLoading ? "Signing In..." : "Sign In"}
+                    </Button>
+                  </form>
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Don't have an account?{" "}
+                      <button type="button" onClick={() => router.push("/auth/admin-signup")} className="text-indigo-600 hover:text-indigo-700 font-medium">
+                        Sign up
+                      </button>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">Demo: <span className="font-mono">admin@easyprep.com</span> / <span className="font-mono">password123</span></p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

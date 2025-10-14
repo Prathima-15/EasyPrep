@@ -122,3 +122,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Force transparent overlay for OTP dialog */
+[data-slot="dialog-overlay"] {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}

@@ -15,7 +15,7 @@ import { useEffect } from "react"
 
 
 interface SignInFormProps {
-  onToggleMode: () => void
+  onToggleMode?: () => void // Made optional since we'll handle redirect internally
 }
 
 export function SignInForm({ onToggleMode }: SignInFormProps) {
@@ -43,6 +43,10 @@ export function SignInForm({ onToggleMode }: SignInFormProps) {
     }
   }
 
+  const handleSignUp = () => {
+    router.push("/auth/signup") // Direct redirect to signup page
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       router.push("/dashboard")
@@ -58,11 +62,11 @@ export function SignInForm({ onToggleMode }: SignInFormProps) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Username</Label>
             <Input
               id="email"
-              type="email"
-              placeholder="Enter your email"
+              type="text"
+              placeholder="Enter your username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -86,7 +90,7 @@ export function SignInForm({ onToggleMode }: SignInFormProps) {
         <div className="mt-4 text-center">
           <p className="text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <button type="button" onClick={onToggleMode} className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <button type="button" onClick={handleSignUp} className="text-indigo-600 hover:text-indigo-700 font-medium">
               Sign up
             </button>
           </p>
