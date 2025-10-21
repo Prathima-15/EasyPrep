@@ -40,17 +40,30 @@ export const mockUsers: User[] = [
   },
 ]
 
-export const signIn = async (email: string, password: string): Promise<User> => {
-  // Mock sign in - replace with real authentication
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const user = mockUsers.find((u) => u.email === email)
-  if (!user || password !== "password123") {
-    throw new Error("Invalid credentials")
+export const signIn = async (username: string, password: string): Promise<User> => {
+  // Import API client
+  const { authAPI } = await import("@/lib/api-client")
+  
+  // Call real backend API
+  const result = await authAPI.login({ username, password })
+  
+  if (!result.success || !result.data) {
+    throw new Error(result.message || "Invalid credentials")
   }
 
-  // Store in localStorage for persistence
+  // Transform backend user to frontend User type
+  const user: User = {
+    id: result.data.user.id.toString(),
+    email: result.data.user.email,
+    name: result.data.user.name,
+    branch: result.data.user.department,
+    role: result.data.user.role,
+  }
+
+  // Token is already stored by authAPI.login()
+  // Also store user data for quick access
   localStorage.setItem("easyprep_user", JSON.stringify(user))
+  
   return user
 }
 
@@ -80,10 +93,15 @@ export const signUp = async (userData: {
 
 export const signOut = async (): Promise<void> => {
   localStorage.removeItem("easyprep_user")
+  localStorage.removeItem("easyprep_token")
 }
 
 export const getCurrentUser = (): User | null => {
   if (typeof window === "undefined") return null
+
+  // Check if token exists
+  const token = localStorage.getItem("easyprep_token")
+  if (!token) return null
 
   const stored = localStorage.getItem("easyprep_user")
   return stored ? JSON.parse(stored) : null

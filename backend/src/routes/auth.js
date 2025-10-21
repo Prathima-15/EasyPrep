@@ -5,6 +5,11 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { sendOTPEmail } = require('../utils/email');
 const { generateOTP } = require('../utils/helpers');
+const bcrypt = require('bcryptjs');
+
+// Temporary storage for pending signups (before OTP verification)
+// In production, use Redis or a database table
+const pendingSignups = new Map();
 
 // Validation rules
 const signupValidation = [
@@ -64,31 +69,141 @@ router.post('/signup/student', signupValidation, async (req, res) => {
       });
     }
 
-    // Create user
-    const user = await User.create({ 
-      name, 
-      email, 
-      username, 
-      department, 
-      password, 
-      role: 'student' 
+    // Generate OTP and temporary user ID
+    const otp = generateOTP();
+    const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Store user data temporarily (NOT in database yet)
+    pendingSignups.set(tempUserId, {
+      name,
+      email,
+      username,
+      department,
+      password: hashedPassword,
+      role: 'student',
+      otp,
+      otpExpiry,
+      createdAt: Date.now()
     });
 
-    // Generate and send OTP
-    const otp = generateOTP();
-    await User.updateOTP(user.id, otp);
+    // Send OTP email
     await sendOTPEmail(email, otp, name);
+
+    // Clean up old pending signups (older than 15 minutes)
+    const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+    for (const [key, value] of pendingSignups.entries()) {
+      if (value.createdAt < fifteenMinutesAgo) {
+        pendingSignups.delete(key);
+      }
+    }
 
     res.status(201).json({
       success: true,
       message: 'Registration successful. Please verify your email.',
       data: {
-        userId: user.id,
-        email: user.email
+        userId: tempUserId, // Send temporary ID to frontend
+        email: email
       }
     });
   } catch (error) {
     console.error('Student signup error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Registration failed. Please try again.' 
+    });
+  }
+});
+
+// Staff Signup (Auto-assigns role based on department)
+router.post('/signup/staff', signupValidation, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        errors: errors.array() 
+      });
+    }
+
+    const { name, email, username, department, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email already registered' 
+      });
+    }
+
+    const existingUsername = await User.findByUsername(username);
+    if (existingUsername) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Username already taken' 
+      });
+    }
+
+    // Validate staff departments
+    const validDepartments = ['IT', 'CSE', 'ECE', 'CIVIL', 'EEE', 'MECH', 'MCT', 'BME', 'FT', 'Placement'];
+    if (!validDepartments.includes(department)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid department' 
+      });
+    }
+
+    // Auto-assign role based on department
+    const role = department === 'Placement' ? 'admin' : 'moderator';
+
+    // Generate OTP and temporary user ID
+    const otp = generateOTP();
+    const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Store user data temporarily (NOT in database yet)
+    pendingSignups.set(tempUserId, {
+      name,
+      email,
+      username,
+      department,
+      password: hashedPassword,
+      role,
+      otp,
+      otpExpiry,
+      createdAt: Date.now()
+    });
+
+    // Send OTP email
+    await sendOTPEmail(email, otp, name);
+
+    // Clean up old pending signups
+    const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+    for (const [key, value] of pendingSignups.entries()) {
+      if (value.createdAt < fifteenMinutesAgo) {
+        pendingSignups.delete(key);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful. Please verify your email.',
+      data: {
+        userId: tempUserId, // Send temporary ID
+        email: email,
+        department: department,
+        role: role
+      }
+    });
+  } catch (error) {
+    console.error('Staff signup error:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Registration failed. Please try again.' 
@@ -253,19 +368,81 @@ router.post('/verify-otp', otpValidation, async (req, res) => {
 
     const { userId, otp } = req.body;
 
-    const isValid = await User.verifyOTP(userId, otp);
+    // Check if this is a temporary user (pending signup)
+    if (userId.startsWith('temp_')) {
+      const pendingUser = pendingSignups.get(userId);
+      
+      if (!pendingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid or expired signup session. Please sign up again.' 
+        });
+      }
 
-    if (!isValid) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid or expired OTP' 
+      // Check OTP validity
+      if (pendingUser.otp !== otp) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid OTP' 
+        });
+      }
+
+      if (Date.now() > pendingUser.otpExpiry) {
+        pendingSignups.delete(userId);
+        return res.status(400).json({ 
+          success: false, 
+          message: 'OTP expired. Please sign up again.' 
+        });
+      }
+
+      // OTP is valid! Now create the user in database
+      try {
+        const newUser = await User.create({
+          name: pendingUser.name,
+          email: pendingUser.email,
+          username: pendingUser.username,
+          department: pendingUser.department,
+          password: pendingUser.password, // Already hashed
+          role: pendingUser.role,
+          isPasswordHashed: true // Tell create() not to hash again
+        });
+
+        // Mark as verified immediately
+        await User.markAsVerified(newUser.id);
+
+        // Remove from pending storage
+        pendingSignups.delete(userId);
+
+        return res.json({
+          success: true,
+          message: 'Email verified successfully. Account created!',
+          data: {
+            userId: newUser.id
+          }
+        });
+      } catch (dbError) {
+        console.error('Database error during user creation:', dbError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to create account. Please try again.' 
+        });
+      }
+    } else {
+      // Legacy support for old OTP verification (if any users exist in DB)
+      const isValid = await User.verifyOTP(userId, otp);
+
+      if (!isValid) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid or expired OTP' 
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Email verified successfully'
       });
     }
-
-    res.json({
-      success: true,
-      message: 'Email verified successfully'
-    });
   } catch (error) {
     console.error('OTP verification error:', error);
     res.status(500).json({ 
@@ -352,30 +529,60 @@ router.post('/resend-otp', async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+    // Check if this is a temporary user (pending signup)
+    if (userId.startsWith('temp_')) {
+      const pendingUser = pendingSignups.get(userId);
+      
+      if (!pendingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid or expired signup session. Please sign up again.' 
+        });
+      }
+
+      // Generate new OTP
+      const otp = generateOTP();
+      const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      // Update OTP in pending storage
+      pendingUser.otp = otp;
+      pendingUser.otpExpiry = otpExpiry;
+      pendingSignups.set(userId, pendingUser);
+
+      // Send new OTP email
+      await sendOTPEmail(pendingUser.email, otp, pendingUser.name);
+
+      return res.json({
+        success: true,
+        message: 'OTP sent successfully'
+      });
+    } else {
+      // Legacy support for users already in database
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+
+      if (user.verified) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email already verified' 
+        });
+      }
+
+      // Generate and send new OTP
+      const otp = generateOTP();
+      await User.updateOTP(userId, otp);
+      await sendOTPEmail(user.email, otp, user.name);
+
+      res.json({
+        success: true,
+        message: 'OTP sent successfully'
       });
     }
-
-    if (user.verified) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already verified' 
-      });
-    }
-
-    // Generate and send new OTP
-    const otp = generateOTP();
-    await User.updateOTP(userId, otp);
-    await sendOTPEmail(user.email, otp, user.name);
-
-    res.json({
-      success: true,
-      message: 'OTP sent successfully'
-    });
   } catch (error) {
     console.error('Resend OTP error:', error);
     res.status(500).json({ 

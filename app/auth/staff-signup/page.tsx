@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import { authAPI } from "@/lib/api-client"
 
 export default function StaffSignupPage() {
   const router = useRouter()
@@ -23,12 +24,14 @@ export default function StaffSignupPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    username: "",
     department: "",
     password: "",
     confirmPassword: "",
   })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [userId, setUserId] = useState<number | null>(null)
   
   // OTP Modal state
   const [showOTPModal, setShowOTPModal] = useState(false)
@@ -106,7 +109,7 @@ export default function StaffSignupPage() {
     setError("")
 
     // Validation
-    if (!formData.name || !formData.email || !formData.department || !formData.password) {
+    if (!formData.name || !formData.email || !formData.username || !formData.department || !formData.password) {
       setError("All fields are required")
       return
     }
@@ -124,30 +127,43 @@ export default function StaffSignupPage() {
     setLoading(true)
 
     try {
-      // Simulate API call - Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Save to localStorage (temporary - replace with API call)
-      const pendingUser = {
-        ...formData,
-        role: formData.department === "Placement" ? "admin" : "moderator",
-        timestamp: new Date().toISOString(),
-      }
-      localStorage.setItem("easyprep_pending_staff", JSON.stringify(pendingUser))
-
-      // Show OTP modal and notify user
-      setShowOTPModal(true)
-      toast({
-        title: "OTP Sent",
-        description: `Verification code sent to ${formData.email}`,
+      // Call real backend API
+      const result = await authAPI.signupStaff({
+        name: formData.name,
+        email: formData.email,
+        username: formData.username,
+        department: formData.department,
+        password: formData.password,
       })
+
+      if (result.success && result.data) {
+        // Store user ID for OTP verification
+        setUserId(result.data.userId)
+        
+        // Show OTP modal
+        setShowOTPModal(true)
+        
+        // Show role info in toast
+        const roleText = formData.department === 'Placement' ? 'Admin' : 'Coordinator'
+        toast({
+          title: "OTP Sent",
+          description: `Verification code sent to ${formData.email}. Role: ${roleText}`,
+        })
+      } else {
+        setError(result.message || "Registration failed")
+        toast({
+          variant: "destructive",
+          title: "Registration Failed",
+          description: result.message || "Please try again later.",
+        })
+      }
     } catch (err: any) {
+      setError(err.message || "Registration failed")
       toast({
         variant: "destructive",
         title: "Registration Failed",
         description: err.message || "Please try again later.",
       })
-      setError(err.message || "Registration failed")
     } finally {
       setLoading(false)
     }
@@ -163,42 +179,43 @@ export default function StaffSignupPage() {
       return
     }
 
+    if (!userId) {
+      setOtpError("User ID not found. Please try signing up again.")
+      return
+    }
+
     setVerifyingOTP(true)
 
     try {
-      // Simulate OTP verification - Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const result = await authAPI.verifyOTP({ userId, otp: otpString })
 
-      const pendingUser = JSON.parse(localStorage.getItem("easyprep_pending_staff") || "{}")
-      
-      // Save verified user (temporary - will be replaced with API)
-      const verifiedUser = {
-        ...pendingUser,
-        verified: true,
+      if (result.success) {
+        toast({
+          title: "Email Verified!",
+          description: "Redirecting to login page...",
+        })
+
+        setShowOTPModal(false)
+
+        // Redirect to staff login
+        setTimeout(() => {
+          router.push("/auth?tab=staff")
+        }, 1500)
+      } else {
+        setOtpError(result.message || "Invalid or expired OTP")
+        toast({
+          variant: "destructive",
+          title: "Verification Failed",
+          description: result.message || "Invalid or expired OTP",
+        })
       }
-      
-      localStorage.setItem("easyprep_user", JSON.stringify(verifiedUser))
-      localStorage.removeItem("easyprep_pending_staff")
-
-      // Close modal and redirect to staff login
-      setShowOTPModal(false)
-      
-      toast({
-        title: "Email Verified!",
-        description: "Redirecting to login page...",
-      })
-      
-      // Redirect to staff login page
-      setTimeout(() => {
-        router.replace("/auth?tab=staff")
-      }, 1000)
     } catch (err: any) {
+      setOtpError(err.message || "Verification failed")
       toast({
         variant: "destructive",
         title: "Verification Failed",
-        description: err.message || "Invalid OTP. Please try again.",
+        description: err.message || "Please try again",
       })
-      setOtpError(err.message || "OTP verification failed")
     } finally {
       setVerifyingOTP(false)
     }
@@ -249,6 +266,19 @@ export default function StaffSignupPage() {
                   type="email"
                   placeholder="Enter your email"
                   value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="username">Staff Id</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Enter the staff Id"
+                  value={formData.username}
                   onChange={handleInputChange}
                   required
                 />

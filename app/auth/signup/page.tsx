@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { authAPI } from "@/lib/api-client"
 
 export default function StudentSignup() {
   const router = useRouter()
@@ -28,10 +29,9 @@ export default function StudentSignup() {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [userId, setUserId] = useState<number | null>(null)
   const [showOtpModal, setShowOtpModal] = useState(false)
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
-  const [generatedOtp, setGeneratedOtp] = useState("")
-  const [otpExpiry, setOtpExpiry] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [isVerifying, setIsVerifying] = useState(false)
   const [isResending, setIsResending] = useState(false)
@@ -114,10 +114,6 @@ export default function StudentSignup() {
     return Object.keys(newErrors).length === 0
   }
 
-  const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString()
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -128,31 +124,48 @@ export default function StudentSignup() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Generate OTP and show modal
-      const otp = generateOTP()
-      setGeneratedOtp(otp)
-      const expiryTime = Date.now() + 10 * 60 * 1000 // 10 minutes
-      setOtpExpiry(expiryTime)
-      setTimeRemaining(600) // 10 minutes in seconds
-      setShowOtpModal(true)
-
-      // In production, send OTP via email
-      console.log("Generated OTP:", otp)
-      toast({
-        title: "OTP Sent",
-        description: `Verification code sent to ${formData.email}`,
+      // Call real backend API
+      const result = await authAPI.signupStudent({
+        name: formData.name,
+        email: formData.email,
+        username: formData.username,
+        department: formData.department,
+        password: formData.password,
       })
+
+      if (result.success && result.data) {
+        // Store user ID for OTP verification
+        setUserId(result.data.userId)
+        
+        // Show OTP modal
+        setShowOtpModal(true)
+        setTimeRemaining(600) // 10 minutes in seconds
+        
+        toast({
+          title: "OTP Sent",
+          description: `Verification code sent to ${formData.email}`,
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Registration Failed",
+          description: result.message || "Please try again later.",
+        })
+        if (result.errors) {
+          const newErrors: Record<string, string> = {}
+          result.errors.forEach((err: any) => {
+            if (err.param) newErrors[err.param] = err.msg
+          })
+          setErrors(newErrors)
+        }
+      }
       
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
       })
-      setErrors({ general: "Registration failed. Please try again." })
     } finally {
       setIsLoading(false)
     }
@@ -205,51 +218,52 @@ export default function StudentSignup() {
       return
     }
 
-    if (Date.now() > otpExpiry) {
+    if (!userId) {
       toast({
         variant: "destructive",
-        title: "OTP Expired",
-        description: "Please request a new OTP",
+        title: "Error",
+        description: "User ID not found. Please try signing up again.",
       })
       return
     }
 
     setIsVerifying(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    if (enteredOtp === generatedOtp || enteredOtp === "123456") {
-      // Store user data in localStorage (in production, save to database)
-      const userData = {
-        name: formData.name,
-        username: formData.username,
-        email: formData.email,
-        department: formData.department,
-        password: formData.password,
-        role: "student",
-        verified: true,
-      }
-      
-      localStorage.setItem("pendingUser", JSON.stringify(userData))
-
-      toast({
-        title: "Email Verified!",
-        description: "Redirecting to login page...",
+    try {
+      // Call real backend API to verify OTP
+      const result = await authAPI.verifyOTP({
+        userId,
+        otp: enteredOtp,
       })
 
-      setIsVerifying(false)
-      setShowOtpModal(false)
+      if (result.success) {
+        toast({
+          title: "Email Verified!",
+          description: "Redirecting to login page...",
+        })
 
-      // Redirect to main auth page
-      setTimeout(() => {
-        router.push("/auth")
-      }, 1000)
-    } else {
+        setIsVerifying(false)
+        setShowOtpModal(false)
+
+        // Redirect to main auth page
+        setTimeout(() => {
+          router.push("/auth")
+        }, 1000)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Invalid OTP",
+          description: result.message || "The OTP you entered is incorrect. Please try again.",
+        })
+        setIsVerifying(false)
+        setOtp(["", "", "", "", "", ""])
+        inputRefs.current[0]?.focus()
+      }
+    } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Invalid OTP",
-        description: "The OTP you entered is incorrect. Please try again.",
+        title: "Verification Failed",
+        description: error.message || "Please try again.",
       })
       setIsVerifying(false)
       setOtp(["", "", "", "", "", ""])
@@ -259,29 +273,47 @@ export default function StudentSignup() {
 
   const handleResendOTP = async () => {
     if (countdown > 0) return
+    if (!userId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "User ID not found. Please try signing up again.",
+      })
+      return
+    }
 
     setIsResending(true)
 
-    // Generate new OTP
-    const newOtp = generateOTP()
-    setGeneratedOtp(newOtp)
-    const expiryTime = Date.now() + 10 * 60 * 1000
-    setOtpExpiry(expiryTime)
-    setTimeRemaining(600)
-    setOtp(["", "", "", "", "", ""])
-    setCountdown(60) // 60 seconds cooldown
+    try {
+      const result = await authAPI.resendOTP(userId)
 
-    // Simulate sending email
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (result.success) {
+        setTimeRemaining(600)
+        setOtp(["", "", "", "", "", ""])
+        setCountdown(60) // 60 seconds cooldown
 
-    console.log("New OTP:", newOtp)
-    toast({
-      title: "OTP Resent",
-      description: `New verification code sent to ${formData.email}`,
-    })
+        toast({
+          title: "OTP Resent",
+          description: `New verification code sent to ${formData.email}`,
+        })
 
-    setIsResending(false)
-    inputRefs.current[0]?.focus()
+        inputRefs.current[0]?.focus()
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Resend",
+          description: result.message || "Please try again.",
+        })
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to Resend",
+        description: error.message || "Please try again.",
+      })
+    } finally {
+      setIsResending(false)
+    }
   }
 
   const formatTime = (seconds: number) => {

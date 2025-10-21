@@ -22,7 +22,7 @@ import {
 import Link from "next/link"
 
 interface CompanyTabsProps {
-  companyId: number
+  companyId: string
   companyName: string
 }
 

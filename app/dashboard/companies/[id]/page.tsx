@@ -3,50 +3,73 @@
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Building2, MapPin, Users } from "lucide-react"
+import { ArrowLeft, Building2, Users, FileText, Download } from "lucide-react"
 import { CompanyTabs } from "@/components/dashboard/company-tabs"
+import { useState, useEffect } from "react"
+import { companyAPI } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
+
+interface Company {
+  _id: string
+  name: string
+  role: string
+  logo?: string
+  jobDescription: string
+  eligibleStudentsFile?: string
+  attachmentFile?: string
+  totalEligibleStudents: number
+  status: string
+  createdAt: string
+}
 
 export default function CompanyDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const companyId = Number.parseInt(params.id as string)
+  const { toast } = useToast()
+  const companyId = params.id as string
 
-  // Mock data - replace with real data later
-  const companies = [
-    {
-      id: 1,
-      name: "Google",
-      logo: "/google-logo.png",
-      description:
-        "Google is a multinational technology company that specializes in Internet-related services and products.",
-      jobRole: "Software Engineer",
-      jobDescription:
-        "We are looking for a Software Engineer to join our team and help build the next generation of products that will impact billions of users worldwide. You will work on large-scale systems and cutting-edge technologies.",
-      location: "Mountain View, CA",
-      employees: "100,000+",
-      industry: "Technology",
-      difficulty: "Hard",
-      totalQuestions: 234,
-    },
-    {
-      id: 2,
-      name: "Microsoft",
-      logo: "/microsoft-logo.png",
-      description:
-        "Microsoft is a multinational technology corporation that develops, manufactures, licenses, supports, and sells computer software, consumer electronics, and personal computers.",
-      jobRole: "Software Engineer",
-      jobDescription:
-        "Join Microsoft as a Software Engineer and work on products that empower every person and organization on the planet to achieve more. You'll collaborate with talented engineers to build scalable solutions.",
-      location: "Redmond, WA",
-      employees: "200,000+",
-      industry: "Technology",
-      difficulty: "Medium",
-      totalQuestions: 189,
-    },
-    // Add more companies as needed
-  ]
+  const [company, setCompany] = useState<Company | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  
+  const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'
 
-  const company = companies.find((c) => c.id === companyId)
+  useEffect(() => {
+    fetchCompanyDetails()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
+
+  const fetchCompanyDetails = async () => {
+    setIsLoading(true)
+    try {
+      const result = await companyAPI.getById(companyId)
+      
+      if (result.success && result.data) {
+        setCompany(result.data as any)
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch company details",
+          variant: "destructive",
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch company details",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Loading company details...</p>
+      </div>
+    )
+  }
 
   if (!company) {
     return (
@@ -62,16 +85,15 @@ export default function CompanyDetailPage() {
     )
   }
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
-      case "easy":
-        return "bg-green-100 text-green-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800"
-      case "hard":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const handleDownloadAttachment = () => {
+    if (company.attachmentFile) {
+      window.open(`${API_URL}/uploads/${company.attachmentFile}`, '_blank')
+    }
+  }
+
+  const handleDownloadEligibleStudents = () => {
+    if (company.eligibleStudentsFile) {
+      window.open(`${API_URL}/uploads/${company.eligibleStudentsFile}`, '_blank')
     }
   }
 
@@ -86,38 +108,59 @@ export default function CompanyDetailPage() {
       {/* Company Header */}
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-start gap-6">
-          <img
-            src={company.logo || "/placeholder.svg"}
-            alt={`${company.name} logo`}
-            className="w-20 h-20 rounded-lg object-cover"
-          />
+          {company.logo ? (
+            <img
+              src={`${API_URL}/uploads/${company.logo}`}
+              alt={`${company.name} logo`}
+              className="w-20 h-20 rounded-lg object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Building2 className="h-10 w-10 text-indigo-600" />
+            </div>
+          )}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold text-foreground">{company.name}</h1>
-              <Badge className={getDifficultyColor(company.difficulty)}>{company.difficulty}</Badge>
+              <Badge variant={company.status === 'active' ? 'default' : 'secondary'}>
+                {company.status}
+              </Badge>
             </div>
-            <h2 className="text-xl text-primary font-semibold mb-3">{company.jobRole}</h2>
+            <h2 className="text-xl text-primary font-semibold mb-3">{company.role}</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                {company.location}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                {company.employees} employees
+                {company.totalEligibleStudents} eligible students
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Building2 className="h-4 w-4" />
-                {company.industry}
+                Posted on {new Date(company.createdAt).toLocaleDateString()}
               </div>
             </div>
 
-            <p className="text-muted-foreground mb-4">{company.description}</p>
-
-            <div className="bg-muted/50 p-4 rounded-lg">
+            <div className="bg-muted/50 p-4 rounded-lg mb-4">
               <h3 className="font-semibold text-foreground mb-2">Job Description</h3>
-              <p className="text-sm text-muted-foreground">{company.jobDescription}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{company.jobDescription}</p>
+            </div>
+
+            {/* Download Buttons */}
+            <div className="flex gap-3">
+              {company.attachmentFile && (
+                <Button onClick={handleDownloadAttachment} variant="outline">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download Job Description
+                </Button>
+              )}
+              {company.eligibleStudentsFile && (
+                <Button onClick={handleDownloadEligibleStudents} variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Eligible Students List
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -1,0 +1,35 @@
+ippo enna pannanum???????????
+asking me?
+?
+want to check Database?
+
+use that cli t see the data in the  Database
+
+nee enna xampp la poi mysql on panniya
+S
+
+XD  ee nee xampp la my sql  on  pannina nee sql install pannave theva illa
+
+type properly
+u idiot
+
+athvathu ennana xampp la iruka mysql on or use pannina
+nee mysql server installall panna 
+okth
+eunderstood
+next what to do 
+
+first let us first  use 
+xampp 
+
+
+easyprep_db/
+├── admins (3 rows typical: id, name, email, department, designation, password, verified, otp, otp_expiry, created_at, updated_at)
+├── audit_logs (id, user_type, user_id, action, entity_type, entity_id, details, ip_address, status, created_at)
+├── companies (id, name, description, website, etc.)
+├── coordinators (id, name, email, department, designation, password, verified, otp, otp_expiry, created_at, updated_at)
+├── department_mappings (id, department, manageable_departments, created_at, updated_at)
+├── eligible_students (id, company_id, register_number, student_name, department, email, cgpa, is_eligible, created_at)
+├── questions (id, company_id, student_id, title, description, difficulty, topic, question_type, status, etc.)
+├── saved_questions (id, student_id, question_id, created_at)
+└── students (id, name, email, register_number, department, password, cgpa, year_of_study, verified, otp, otp_expiry, created_at, updated_at)

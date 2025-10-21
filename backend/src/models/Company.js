@@ -4,13 +4,67 @@ const companySchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
+    trim: true
   },
-  description: {
+  jobDescription: {
     type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  logo: {
+    type: String, // Path to logo file
     default: ''
   },
+  // File paths
+  eligibleStudentsFile: {
+    type: String, // Path to Excel file
+    required: true
+  },
+  attachmentFile: {
+    type: String, // Path to PDF/Image file (optional)
+    default: ''
+  },
+  // Eligible students data parsed from Excel (optional for now)
+  eligibleStudents: [{
+    registerNumber: {
+      type: String,
+      required: false
+    },
+    name: {
+      type: String,
+      required: false
+    },
+    department: {
+      type: String,
+      required: false
+    },
+    email: {
+      type: String,
+      required: false
+    },
+    cgpa: {
+      type: Number,
+      default: 0
+    },
+    skills: {
+      type: String,
+      default: ''
+    }
+  }],
+  totalEligibleStudents: {
+    type: Number,
+    default: 0
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
+  },
+  // Additional fields
   website: {
     type: String,
     default: ''
@@ -27,45 +81,16 @@ const companySchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  // Eligible students list (uploaded via Excel)
-  eligibleStudents: [{
-    registerNumber: {
-      type: String,
-      required: true
-    },
-    name: {
-      type: String,
-      required: true
-    },
-    department: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true
-    },
-    cgpa: {
-      type: Number,
-      default: 0
-    }
-  }],
-  // Recruitment details
   recruitmentYear: {
     type: Number,
     default: new Date().getFullYear()
-  },
-  recruitmentStatus: {
-    type: String,
-    enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
-    default: 'upcoming'
   },
   visitDate: {
     type: Date
   },
   // Metadata
   createdBy: {
-    type: String, // user email
+    type: String, // user email or username
     required: true
   },
   updatedBy: {
@@ -77,8 +102,9 @@ const companySchema = new mongoose.Schema({
 
 // Indexes for better performance
 companySchema.index({ name: 1 });
-companySchema.index({ recruitmentYear: -1, recruitmentStatus: 1 });
+companySchema.index({ status: 1, createdAt: -1 });
 companySchema.index({ 'eligibleStudents.registerNumber': 1 });
+companySchema.index({ createdBy: 1 });
 
 const Company = mongoose.model('Company', companySchema);
 

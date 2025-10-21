@@ -4,11 +4,11 @@ const bcrypt = require('bcryptjs');
 class User {
   // Create new user
   static async create(userData) {
-    const { name, email, username, department, password, role = 'student' } = userData;
+    const { name, email, username, department, password, role = 'student', isPasswordHashed = false } = userData;
     
     try {
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Only hash password if not already hashed
+      const hashedPassword = isPasswordHashed ? password : await bcrypt.hash(password, 10);
       
       const [result] = await pool.execute(
         `INSERT INTO users (name, email, username, department, password, role) 
@@ -105,6 +105,19 @@ class User {
       }
       
       return false;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Mark user as verified
+  static async markAsVerified(userId) {
+    try {
+      await pool.execute(
+        'UPDATE users SET verified = TRUE, otp = NULL, otp_expiry = NULL WHERE id = ?',
+        [userId]
+      );
+      return true;
     } catch (error) {
       throw error;
     }

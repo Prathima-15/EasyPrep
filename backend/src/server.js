@@ -6,6 +6,7 @@ require('dotenv').config();
 const { testConnection } = require('./config/database');
 const { connectMongoDB } = require('./config/mongodb');
 const authRoutes = require('./routes/auth');
+const companyRoutes = require('./routes/companies');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +24,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/companies', companyRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
