@@ -3,9 +3,21 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { BookOpen, Sparkles, User, Mail, Lock, IdCard, ArrowLeft, Shield, Clock, CheckCircle, RefreshCw, Building2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
 
 export default function StudentSignup() {
   const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
     username: "", // Register Number
@@ -129,10 +141,17 @@ export default function StudentSignup() {
 
       // In production, send OTP via email
       console.log("Generated OTP:", otp)
-      alert(`OTP sent to ${formData.email}. For demo, use: ${otp} or 123456`)
+      toast({
+        title: "OTP Sent",
+        description: `Verification code sent to ${formData.email}`,
+      })
       
     } catch (error) {
-      alert("Registration failed. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Please try again later.",
+      })
       setErrors({ general: "Registration failed. Please try again." })
     } finally {
       setIsLoading(false)
@@ -178,12 +197,20 @@ export default function StudentSignup() {
     const enteredOtp = otp.join("")
 
     if (enteredOtp.length !== 6) {
-      alert("Please enter all 6 digits")
+      toast({
+        variant: "destructive",
+        title: "Incomplete OTP",
+        description: "Please enter all 6 digits",
+      })
       return
     }
 
     if (Date.now() > otpExpiry) {
-      alert("OTP Expired. Please request a new OTP")
+      toast({
+        variant: "destructive",
+        title: "OTP Expired",
+        description: "Please request a new OTP",
+      })
       return
     }
 
@@ -206,7 +233,10 @@ export default function StudentSignup() {
       
       localStorage.setItem("pendingUser", JSON.stringify(userData))
 
-      alert("Success! Email verified successfully. Please login to continue.")
+      toast({
+        title: "Email Verified!",
+        description: "Redirecting to login page...",
+      })
 
       setIsVerifying(false)
       setShowOtpModal(false)
@@ -216,7 +246,11 @@ export default function StudentSignup() {
         router.push("/auth")
       }, 1000)
     } else {
-      alert("Invalid OTP. The OTP you entered is incorrect. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Invalid OTP",
+        description: "The OTP you entered is incorrect. Please try again.",
+      })
       setIsVerifying(false)
       setOtp(["", "", "", "", "", ""])
       inputRefs.current[0]?.focus()
@@ -241,7 +275,10 @@ export default function StudentSignup() {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     console.log("New OTP:", newOtp)
-    alert(`OTP Resent. New OTP sent to ${formData.email}`)
+    toast({
+      title: "OTP Resent",
+      description: `New verification code sent to ${formData.email}`,
+    })
 
     setIsResending(false)
     inputRefs.current[0]?.focus()
@@ -442,7 +479,7 @@ export default function StudentSignup() {
                 onClick={() => router.push("/auth/student-login")}
                 className="text-indigo-600 underline font-medium"
               >
-                Sign in here
+                Sign in
               </button>
             </p>
             <button
@@ -458,21 +495,20 @@ export default function StudentSignup() {
       </div>
 
       {/* OTP Verification Modal */}
-      {showOtpModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-indigo-600 mb-2">Verify Your Email</h2>
-              <p className="text-gray-600">
-                We've sent a 6-digit code to <strong>{formData.email}</strong>
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              {/* OTP Input Boxes */}
-              <div className="flex justify-center gap-2">
+      <Dialog open={showOtpModal} onOpenChange={setShowOtpModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-indigo-600">Verify Your Email</DialogTitle>
+            <DialogDescription className="text-center">
+              We've sent a 6-digit OTP to <span className="font-semibold">{formData.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label className="text-center block">Enter OTP</Label>
+              <div className="flex justify-center gap-3">
                 {otp.map((digit, index) => (
-                  <input
+                  <Input
                     key={index}
                     ref={(el) => {
                       inputRefs.current[index] = el
@@ -484,77 +520,63 @@ export default function StudentSignup() {
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
                     onPaste={index === 0 ? handleOtpPaste : undefined}
-                    className="w-12 h-12 text-center text-lg font-semibold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
+                    className="w-14 h-14 text-center text-2xl font-bold border-2 border-indigo-300 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                     autoFocus={index === 0}
                   />
                 ))}
               </div>
+            </div>
 
-              {/* Timer */}
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                <Clock className="w-4 h-4" />
-                <span>Time remaining: {formatTime(timeRemaining)}</span>
-              </div>
+            {/* Timer */}
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+              <Clock className="w-4 h-4" />
+              <span>Time remaining: {formatTime(timeRemaining)}</span>
+            </div>
 
-              {/* Verify Button */}
-              <button
-                onClick={handleVerifyOTP}
-                disabled={isVerifying || otp.join("").length !== 6}
-                className={`w-full py-3 px-4 rounded-lg font-medium text-white ${
-                  isVerifying || otp.join("").length !== 6
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                }`}
-              >
-                {isVerifying ? (
-                  <span className="flex items-center justify-center">
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Verifying...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Verify OTP
-                  </span>
-                )}
-              </button>
+            <Button
+              onClick={handleVerifyOTP}
+              disabled={isVerifying || otp.join("").length !== 6}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
+            >
+              {isVerifying ? (
+                <span className="flex items-center justify-center">
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Verifying...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Verify OTP
+                </span>
+              )}
+            </Button>
 
-              {/* Resend OTP */}
-              <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  Didn't receive the code?{" "}
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={countdown > 0 || isResending}
-                    className={`font-medium ${
-                      countdown > 0 || isResending
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-indigo-600 hover:text-indigo-700'
-                    }`}
-                  >
-                    {isResending ? (
-                      "Sending..."
-                    ) : countdown > 0 ? (
-                      `Resend in ${countdown}s`
-                    ) : (
-                      "Resend OTP"
-                    )}
-                  </button>
-                </p>
-              </div>
-
-              {/* Close Button */}
-              <button
-                onClick={() => setShowOtpModal(false)}
-                className="w-full py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Didn't receive the code?{" "}
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  disabled={countdown > 0 || isResending}
+                  className={`font-medium ${
+                    countdown > 0 || isResending
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-indigo-600 hover:text-indigo-700'
+                  }`}
+                >
+                  {isResending ? (
+                    "Sending..."
+                  ) : countdown > 0 ? (
+                    `Resend in ${countdown}s`
+                  ) : (
+                    "Resend OTP"
+                  )}
+                </button>
+              </p>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { useAuth } from "@/contexts/auth-context"
-import { BookOpen, Sparkles, Shield, UserCog } from "lucide-react"
+import { BookOpen, Sparkles, Shield } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,20 +18,16 @@ export default function AuthPage() {
   
   useEffect(() => {
     const tabParam = searchParams.get("tab")
-    if (tabParam && ["student", "coordinator", "admin"].includes(tabParam)) {
+    if (tabParam && ["student", "staff"].includes(tabParam)) {
       setTab(tabParam)
     }
   }, [searchParams])
   const { signIn } = useAuth()
   const router = useRouter()
-  const [coordinatorEmail, setCoordinatorEmail] = useState("")
-  const [coordinatorPassword, setCoordinatorPassword] = useState("")
-  const [adminEmail, setAdminEmail] = useState("")
-  const [adminPassword, setAdminPassword] = useState("")
-  const [coordinatorError, setCoordinatorError] = useState("")
-  const [adminError, setAdminError] = useState("")
-  const [coordinatorLoading, setCoordinatorLoading] = useState(false)
-  const [adminLoading, setAdminLoading] = useState(false)
+  const [staffUsername, setStaffUsername] = useState("")
+  const [staffPassword, setStaffPassword] = useState("")
+  const [staffError, setStaffError] = useState("")
+  const [staffLoading, setStaffLoading] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -50,8 +46,7 @@ export default function AuthPage() {
           <Tabs value={tab} onValueChange={setTab} className="w-full">
             <TabsList className="w-full mb-6">
               <TabsTrigger value="student" className="flex-1">Student</TabsTrigger>
-              <TabsTrigger value="coordinator" className="flex-1">Coordinator</TabsTrigger>
-              <TabsTrigger value="admin" className="flex-1">Admin</TabsTrigger>
+              <TabsTrigger value="staff" className="flex-1">Staff Login</TabsTrigger>
             </TabsList>
             <TabsContent value="student">
               <SignInForm onToggleMode={() => {}} />
@@ -59,136 +54,77 @@ export default function AuthPage() {
                 <p className="text-xs text-muted-foreground mt-2">Demo: <span className="font-mono">student@example.com</span> / <span className="font-mono">password123</span></p>
               </div>
             </TabsContent>
-            <TabsContent value="coordinator">
+            <TabsContent value="staff">
               <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
                   <div className="flex items-center justify-center mb-2">
                     <Shield className="h-8 w-8 text-indigo-600" />
                   </div>
-                  <CardTitle className="text-2xl font-bold text-indigo-600">Coordinator Login</CardTitle>
-                  <CardDescription>Access the admin panel and manage student data</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-indigo-600">Staff Login</CardTitle>
+                  <CardDescription>Access coordinator or admin dashboard</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={async (e) => {
                     e.preventDefault();
-                    setCoordinatorError("");
-                    setCoordinatorLoading(true);
+                    setStaffError("");
+                    setStaffLoading(true);
                     try {
-                      await signIn(coordinatorEmail, coordinatorPassword);
+                      await signIn(staffUsername, staffPassword);
                       const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
+                      
+                      // Redirect based on role
                       if (user?.role === "moderator") {
                         router.replace("/coordinator");
+                      } else if (user?.role === "admin") {
+                        router.replace("/admin");
                       } else {
-                        setCoordinatorError("Not a coordinator account");
+                        setStaffError("Invalid staff credentials");
                       }
                     } catch (err: any) {
-                      setCoordinatorError(err.message || "Login failed");
+                      setStaffError(err.message || "Login failed");
                     } finally {
-                      setCoordinatorLoading(false);
+                      setStaffLoading(false);
                     }
                   }} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="coordinator-username">Username</Label>
+                      <Label htmlFor="staff-username">Username</Label>
                       <Input
-                        id="coordinator-username"
+                        id="staff-username"
                         type="text"
                         placeholder="Enter your username"
-                        value={coordinatorEmail}
-                        onChange={(e) => setCoordinatorEmail(e.target.value)}
+                        value={staffUsername}
+                        onChange={(e) => setStaffUsername(e.target.value)}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="coordinator-password">Password</Label>
+                      <Label htmlFor="staff-password">Password</Label>
                       <Input
-                        id="coordinator-password"
+                        id="staff-password"
                         type="password"
                         placeholder="Enter your password"
-                        value={coordinatorPassword}
-                        onChange={(e) => setCoordinatorPassword(e.target.value)}
+                        value={staffPassword}
+                        onChange={(e) => setStaffPassword(e.target.value)}
                         required
                       />
                     </div>
-                    {coordinatorError && <p className="text-sm text-red-500">{coordinatorError}</p>}
-                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={coordinatorLoading}>
-                      {coordinatorLoading ? "Signing In..." : "Sign In"}
+                    {staffError && <p className="text-sm text-red-500">{staffError}</p>}
+                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={staffLoading}>
+                      {staffLoading ? "Signing In..." : "Sign In"}
                     </Button>
                   </form>
                   <div className="mt-4 text-center">
                     <p className="text-sm text-muted-foreground">
                       Don't have an account?{" "}
-                      <button type="button" onClick={() => router.push("/auth/coordinator-signup")} className="text-indigo-600 hover:text-indigo-700 font-medium">
+                      <button type="button" onClick={() => router.push("/auth/staff-signup")} className="text-indigo-600 hover:text-indigo-700 font-medium">
                         Sign up
                       </button>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">Demo: <span className="font-mono">coordinator@example.com</span> / <span className="font-mono">password123</span></p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="admin">
-              <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <UserCog className="h-8 w-8 text-indigo-600" />
-                  </div>
-                  <CardTitle className="text-2xl font-bold text-indigo-600">Admin Login</CardTitle>
-                  <CardDescription>Access coordinator dashboard and system settings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    setAdminError("");
-                    setAdminLoading(true);
-                    try {
-                      await signIn(adminEmail, adminPassword);
-                      const user = JSON.parse(localStorage.getItem("easyprep_user") || "null");
-                      if (user?.role === "admin") {
-                        router.replace("/dashboard/coordinator");
-                      } else {
-                        setAdminError("Not an admin account");
-                      }
-                    } catch (err: any) {
-                      setAdminError(err.message || "Login failed");
-                    } finally {
-                      setAdminLoading(false);
-                    }
-                  }} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="admin-username">Username</Label>
-                      <Input
-                        id="admin-username"
-                        type="text"
-                        placeholder="Enter your username"
-                        value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="admin-password">Password</Label>
-                      <Input
-                        id="admin-password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    {adminError && <p className="text-sm text-red-500">{adminError}</p>}
-                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={adminLoading}>
-                      {adminLoading ? "Signing In..." : "Sign In"}
-                    </Button>
-                  </form>
-                  <div className="mt-4 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Don't have an account?{" "}
-                      <button type="button" onClick={() => router.push("/auth/admin-signup")} className="text-indigo-600 hover:text-indigo-700 font-medium">
-                        Sign up
-                      </button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Demo Coordinator: <span className="font-mono">coordinator</span> / <span className="font-mono">password123</span>
+                      <br />
+                      Demo Admin: <span className="font-mono">admin</span> / <span className="font-mono">password123</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">Demo: <span className="font-mono">admin@easyprep.com</span> / <span className="font-mono">password123</span></p>
                   </div>
                 </CardContent>
               </Card>

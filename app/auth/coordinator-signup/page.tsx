@@ -3,9 +3,11 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { BookOpen, Sparkles, User, Mail, Lock, Shield, Clock, CheckCircle, RefreshCw, Briefcase, Building2, ArrowLeft } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CoordinatorSignup() {
   const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -109,10 +111,17 @@ export default function CoordinatorSignup() {
       setShowOtpModal(true)
 
       console.log("Generated OTP:", otp)
-      alert(`OTP sent to ${formData.email}. For demo, use: ${otp} or 123456`)
+      toast({
+        title: "OTP Sent",
+        description: `Verification code sent to ${formData.email}`,
+      })
       
     } catch (error) {
-      alert("Registration failed. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Please try again later.",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -156,12 +165,20 @@ export default function CoordinatorSignup() {
     const enteredOtp = otp.join("")
 
     if (enteredOtp.length !== 6) {
-      alert("Please enter all 6 digits")
+      toast({
+        variant: "destructive",
+        title: "Incomplete OTP",
+        description: "Please enter all 6 digits",
+      })
       return
     }
 
     if (Date.now() > otpExpiry) {
-      alert("OTP Expired. Please request a new OTP")
+      toast({
+        variant: "destructive",
+        title: "OTP Expired",
+        description: "Please request a new OTP",
+      })
       return
     }
 
@@ -182,7 +199,10 @@ export default function CoordinatorSignup() {
       
       localStorage.setItem("pendingCoordinator", JSON.stringify(userData))
 
-      alert("Success! Email verified successfully. Please login to continue.")
+      toast({
+        title: "Email Verified!",
+        description: "Redirecting to login page...",
+      })
 
       setIsVerifying(false)
       setShowOtpModal(false)
@@ -196,7 +216,11 @@ export default function CoordinatorSignup() {
         }
       }, 1000)
     } else {
-      alert("Invalid OTP. The OTP you entered is incorrect. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Invalid OTP",
+        description: "The OTP you entered is incorrect. Please try again.",
+      })
       setIsVerifying(false)
       setOtp(["", "", "", "", "", ""])
       inputRefs.current[0]?.focus()
@@ -219,7 +243,10 @@ export default function CoordinatorSignup() {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     console.log("New OTP:", newOtp)
-    alert(`OTP Resent. New OTP sent to ${formData.email}`)
+    toast({
+      title: "OTP Resent",
+      description: `New verification code sent to ${formData.email}`,
+    })
 
     setIsResending(false)
     inputRefs.current[0]?.focus()

@@ -2,10 +2,32 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpen, Sparkles, User, Mail, Lock, IdCard, ArrowLeft, Shield, Clock, CheckCircle, RefreshCw } from "lucide-react"
+import { BookOpen, Sparkles, User, Mail, Lock, IdCard, ArrowLeft, Shield, Clock, CheckCircle, RefreshC      localStorage.setItem("pendingUser", JSON.stringify(userData))
+
+      toast({
+        title: "Email Verified!",
+        description: "Redirecting to login page...",
+      })
+
+      setIsVerifying(false)
+      setShowOtpModal(false)
+
+      // Redirect to main auth page
+      setTimeout(() => {
+        router.push("/auth")
+      }, 1000)
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Invalid OTP",
+        description: "The OTP you entered is incorrect. Please try again.",
+      })
+      setIsVerifying(false)de-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function StudentSignup() {
   const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
     username: "", // Register Number
@@ -123,10 +145,17 @@ export default function StudentSignup() {
 
       // In production, send OTP via email
       console.log("Generated OTP:", otp)
-      alert(`OTP sent to ${formData.email}. For demo, use: ${otp} or 123456`)
+      toast({
+        title: "OTP Sent",
+        description: `Verification code sent to ${formData.email}`,
+      })
       
     } catch (error) {
-      alert("Registration failed. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Please try again later.",
+      })
       setErrors({ general: "Registration failed. Please try again." })
     } finally {
       setIsLoading(false)
@@ -172,12 +201,20 @@ export default function StudentSignup() {
     const enteredOtp = otp.join("")
 
     if (enteredOtp.length !== 6) {
-      alert("Please enter all 6 digits")
+      toast({
+        variant: "destructive",
+        title: "Incomplete OTP",
+        description: "Please enter all 6 digits",
+      })
       return
     }
 
     if (Date.now() > otpExpiry) {
-      alert("OTP Expired. Please request a new OTP")
+      toast({
+        variant: "destructive",
+        title: "OTP Expired",
+        description: "Please request a new OTP",
+      })
       return
     }
 

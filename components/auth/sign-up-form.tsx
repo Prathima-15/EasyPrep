@@ -112,7 +112,12 @@ export function SignUpForm({ onToggleMode }: SignUpFormProps) {
 
     // In production, send OTP via email
     console.log("Generated OTP:", otp)
-    alert(`OTP sent to ${formData.email}. For demo, use: ${otp} or 123456`)
+    
+    // Show toast notification
+    toast({
+      title: "OTP Sent",
+      description: `Verification code sent to ${formData.email}`,
+    })
   }
 
   const handleOtpChange = (index: number, value: string) => {
