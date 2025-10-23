@@ -7,6 +7,7 @@ const { testConnection } = require('./config/database');
 const { connectMongoDB } = require('./config/mongodb');
 const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/companies');
+const reviewRoutes = require('./routes/reviews');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +26,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api', reviewRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -31,6 +31,12 @@ async function apiCall<T>(
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('API Error Response:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        data
+      });
       throw new Error(data.message || 'API request failed');
     }
 
@@ -346,4 +352,66 @@ export const questionAPI = {
   },
 };
 
-export default { authAPI, companyAPI, questionAPI };
+// Review API
+export const reviewAPI = {
+  // Get reviews for a company
+  getByCompany: async (companyId: string) => {
+    return apiCall(`/companies/${companyId}/reviews`, { method: 'GET' });
+  },
+
+  // Create a review
+  create: async (companyId: string, data: {
+    role: string;
+    rating: number;
+    difficulty: string;
+    summary: string;
+    pros: string[];
+    cons: string[];
+    interviewTopics: string[];
+  }) => {
+    return apiCall(`/companies/${companyId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// Company Question API
+export const companyQuestionAPI = {
+  // Get questions for a company
+  getByCompany: async (companyId: string, category?: string) => {
+    const query = category ? `?category=${encodeURIComponent(category)}` : '';
+    return apiCall(`/companies/${companyId}/questions${query}`, { method: 'GET' });
+  },
+
+  // Create question(s) for a company
+  create: async (companyId: string, questions: Array<{
+    category: string;
+    questionText: string;
+    difficulty: string;
+    tags: string[];
+    answer?: string;
+  }>) => {
+    return apiCall(`/companies/${companyId}/questions`, {
+      method: 'POST',
+      body: JSON.stringify({ questions }),
+    });
+  },
+
+  // Update a question
+  update: async (questionId: string, data: any) => {
+    return apiCall(`/questions/${questionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete a question
+  delete: async (questionId: string) => {
+    return apiCall(`/questions/${questionId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+export default { authAPI, companyAPI, questionAPI, reviewAPI, companyQuestionAPI };

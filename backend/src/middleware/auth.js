@@ -36,7 +36,9 @@ const authMiddleware = async (req, res, next) => {
 
     // Attach user to request object
     req.user = {
+      userId: user.id,
       id: user.id,
+      name: user.name,
       email: user.email,
       username: user.username,
       role: user.role,

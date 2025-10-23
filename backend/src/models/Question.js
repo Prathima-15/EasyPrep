@@ -29,33 +29,41 @@ const questionSchema = new mongoose.Schema({
     required: true
   },
   // Question details
-  title: {
+  category: {
+    type: String,
+    required: true,
+    enum: ['Technical / DSA', 'System Design', 'Behavioral', 'Database', 'Other']
+  },
+  questionText: {
     type: String,
     required: true,
     trim: true
   },
-  description: {
-    type: String,
-    required: true
-  },
   difficulty: {
     type: String,
-    enum: ['Easy', 'Medium', 'Hard'],
-    default: 'Medium'
-  },
-  topic: {
-    type: String,
-    default: ''
+    required: true,
+    enum: ['Easy', 'Medium', 'Hard']
   },
   tags: [{
     type: String,
     trim: true
   }],
-  // Question type/category
-  category: {
+  answer: {
     type: String,
-    enum: ['Technical', 'Aptitude', 'HR', 'Coding', 'Other'],
-    default: 'Technical'
+    default: ''
+  },
+  // Engagement metrics
+  upvotes: {
+    type: Number,
+    default: 0
+  },
+  views: {
+    type: Number,
+    default: 0
+  },
+  frequency: {
+    type: Number,
+    default: 1 // How many times this question was asked
   },
   // Review status
   status: {
@@ -71,28 +79,16 @@ const questionSchema = new mongoose.Schema({
   },
   rejectionReason: {
     type: String
-  },
-  // Metadata
-  savedCount: {
-    type: Number,
-    default: 0
-  },
-  viewCount: {
-    type: Number,
-    default: 0
   }
 }, {
   timestamps: true
 });
 
-// Indexes for better query performance
-questionSchema.index({ companyId: 1 });
+// Indexes
+questionSchema.index({ companyId: 1, status: 1, category: 1 });
 questionSchema.index({ studentId: 1 });
 questionSchema.index({ status: 1 });
-questionSchema.index({ difficulty: 1 });
 questionSchema.index({ category: 1 });
-questionSchema.index({ createdAt: -1 });
-questionSchema.index({ companyName: 'text', title: 'text', description: 'text', tags: 'text' });
 
 const Question = mongoose.model('Question', questionSchema);
 

@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,241 +11,100 @@ import {
   FileQuestion,
   Plus,
   Star,
-  TrendingUp,
   Code,
   Users,
   Database,
   Layers,
-  ChevronRight,
 } from "lucide-react"
-import Link from "next/link"
+import { AddReviewQuestionDialog } from "./add-review-question-dialog"
+import { reviewAPI, companyQuestionAPI } from "@/lib/api-client"
 
 interface CompanyTabsProps {
   companyId: string
   companyName: string
 }
 
+const categoryIcons: Record<string, any> = {
+  'Technical / DSA': Code,
+  'System Design': Layers,
+  'Behavioral': Users,
+  'Database': Database,
+  'Other': FileQuestion
+}
+
 export function CompanyTabs({ companyId, companyName }: CompanyTabsProps) {
   const [activeTab, setActiveTab] = useState("reviews")
-  const router = useRouter()
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  
+  // Reviews state
+  const [reviews, setReviews] = useState<any[]>([])
+  const [reviewStats, setReviewStats] = useState<any>(null)
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true)
+  
+  // Questions state
+  const [questions, setQuestions] = useState<any[]>([])
+  const [questionsByCategory, setQuestionsByCategory] = useState<any>({})
+  const [questionStats, setQuestionStats] = useState<any>(null)
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true)
 
-  // Mock data - replace with real data later
-  const reviewsData = {
-    averageRating: 4.2,
-    totalReviews: 89,
-    averageDifficulty: 3.4,
-    pros: ["Great work-life balance", "Innovative projects", "Strong team collaboration", "Learning opportunities"],
-    cons: ["High expectations", "Fast-paced environment", "Complex technical challenges"],
-    commonTopics: [
-      { name: "System Design", frequency: 78 },
-      { name: "Coding", frequency: 92 },
-      { name: "Behavioral", frequency: 65 },
-      { name: "Technical Discussion", frequency: 71 },
-    ],
-    recentReviews: [
-      {
-        id: 1,
-        author: "Anonymous",
-        role: "Software Engineer",
-        rating: 4,
-        difficulty: "Hard",
-        summary:
-          "Great interview experience with focus on system design and coding. Interviewers were friendly and provided good feedback.",
-        date: "2 days ago",
-      },
-      {
-        id: 2,
-        author: "Anonymous",
-        role: "Product Manager",
-        rating: 5,
-        difficulty: "Medium",
-        summary:
-          "Well-structured interview process. Questions were relevant to the role and tested both technical and product thinking.",
-        date: "1 week ago",
-      },
-    ],
+  useEffect(() => {
+    fetchReviews()
+    fetchQuestions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
+
+  const fetchReviews = async () => {
+    setIsLoadingReviews(true)
+    try {
+      console.log('Fetching reviews for companyId:', companyId)
+      const result = await reviewAPI.getByCompany(companyId)
+      console.log('Reviews API result:', result)
+      if (result.success && result.data) {
+        const data = result.data as any
+        console.log('Reviews data:', data.reviews)
+        setReviews(data.reviews || [])
+        setReviewStats(data.stats || {})
+      } else {
+        console.error('Failed to fetch reviews:', result.message)
+      }
+    } catch (error: any) {
+      console.error('Error fetching reviews:', error)
+    } finally {
+      setIsLoadingReviews(false)
+    }
   }
 
-  const questionsData = {
-    totalQuestions: 234,
-    categories: [
-      {
-        name: "Technical / DSA",
-        icon: Code,
-        count: 89,
-        difficulty: "Hard",
-        questions: [
-          {
-            id: 1,
-            text: "Implement a LRU Cache with O(1) operations",
-            difficulty: "Hard",
-            frequency: 85,
-            tags: ["Data Structures", "Design"],
-          },
-          {
-            id: 2,
-            text: "Find the longest palindromic substring",
-            difficulty: "Medium",
-            frequency: 72,
-            tags: ["Strings", "Dynamic Programming"],
-          },
-          {
-            id: 3,
-            text: "Two Sum problem variations",
-            difficulty: "Easy",
-            frequency: 95,
-            tags: ["Arrays", "Hash Table"],
-          },
-          {
-            id: 4,
-            text: "Binary Tree Level Order Traversal",
-            difficulty: "Medium",
-            frequency: 68,
-            tags: ["Trees", "BFS"],
-          },
-          {
-            id: 5,
-            text: "Merge K Sorted Lists",
-            difficulty: "Hard",
-            frequency: 78,
-            tags: ["Linked Lists", "Heap"],
-          },
-          {
-            id: 6,
-            text: "Valid Parentheses",
-            difficulty: "Easy",
-            frequency: 89,
-            tags: ["Stack", "Strings"],
-          },
-        ],
-      },
-      {
-        name: "System Design",
-        icon: Layers,
-        count: 45,
-        difficulty: "Hard",
-        questions: [
-          {
-            id: 7,
-            text: "Design a URL shortening service like bit.ly",
-            difficulty: "Hard",
-            frequency: 91,
-            tags: ["Scalability", "Databases"],
-          },
-          {
-            id: 8,
-            text: "Design a chat application like WhatsApp",
-            difficulty: "Hard",
-            frequency: 85,
-            tags: ["Real-time", "Messaging"],
-          },
-          {
-            id: 9,
-            text: "Design a social media feed",
-            difficulty: "Hard",
-            frequency: 76,
-            tags: ["Scalability", "Caching"],
-          },
-          {
-            id: 10,
-            text: "Design a video streaming service",
-            difficulty: "Hard",
-            frequency: 82,
-            tags: ["CDN", "Video Processing"],
-          },
-          {
-            id: 11,
-            text: "Design a ride-sharing service",
-            difficulty: "Hard",
-            frequency: 79,
-            tags: ["Location Services", "Matching"],
-          },
-        ],
-      },
-      {
-        name: "Behavioral",
-        icon: Users,
-        count: 67,
-        difficulty: "Medium",
-        questions: [
-          {
-            id: 12,
-            text: "Tell me about a time you had to work with a difficult team member",
-            difficulty: "Medium",
-            frequency: 68,
-            tags: ["Leadership", "Communication"],
-          },
-          {
-            id: 13,
-            text: "Describe a challenging project you worked on",
-            difficulty: "Medium",
-            frequency: 74,
-            tags: ["Problem Solving", "Project Management"],
-          },
-          {
-            id: 14,
-            text: "How do you handle tight deadlines?",
-            difficulty: "Easy",
-            frequency: 82,
-            tags: ["Time Management", "Stress"],
-          },
-          {
-            id: 15,
-            text: "Tell me about a time you failed",
-            difficulty: "Medium",
-            frequency: 71,
-            tags: ["Learning", "Resilience"],
-          },
-          {
-            id: 16,
-            text: "Why do you want to work here?",
-            difficulty: "Easy",
-            frequency: 95,
-            tags: ["Motivation", "Company Research"],
-          },
-        ],
-      },
-      {
-        name: "Database",
-        icon: Database,
-        count: 33,
-        difficulty: "Medium",
-        questions: [
-          {
-            id: 17,
-            text: "Optimize this SQL query for better performance",
-            difficulty: "Medium",
-            frequency: 54,
-            tags: ["SQL", "Performance"],
-          },
-          {
-            id: 18,
-            text: "Explain ACID properties",
-            difficulty: "Medium",
-            frequency: 67,
-            tags: ["Database Theory", "Transactions"],
-          },
-          {
-            id: 19,
-            text: "Design a database schema for an e-commerce site",
-            difficulty: "Hard",
-            frequency: 58,
-            tags: ["Schema Design", "Normalization"],
-          },
-          {
-            id: 20,
-            text: "What are database indexes and when to use them?",
-            difficulty: "Medium",
-            frequency: 72,
-            tags: ["Indexing", "Performance"],
-          },
-        ],
-      },
-    ],
+  const fetchQuestions = async () => {
+    setIsLoadingQuestions(true)
+    try {
+      console.log('Fetching questions for companyId:', companyId)
+      const result = await companyQuestionAPI.getByCompany(companyId)
+      console.log('Questions API result:', result)
+      if (result.success && result.data) {
+        const data = result.data as any
+        console.log('Questions data:', data.questions)
+        console.log('Questions length:', data.questions?.length)
+        setQuestions(data.questions || [])
+        setQuestionsByCategory(data.categories || {})
+        setQuestionStats(data.stats || {})
+      } else {
+        console.error('Failed to fetch questions:', result.message)
+      }
+    } catch (error: any) {
+      console.error('Error fetching questions:', error)
+    } finally {
+      setIsLoadingQuestions(false)
+    }
+  }
+
+  const handleSuccess = () => {
+    // Refresh data after successful submission
+    fetchReviews()
+    fetchQuestions()
   }
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
+    switch (difficulty?.toLowerCase()) {
       case "easy":
         return "bg-green-100 text-green-800"
       case "medium":
@@ -258,15 +116,24 @@ export function CompanyTabs({ companyId, companyName }: CompanyTabsProps) {
     }
   }
 
-  const handleAddReview = () => {
-    router.push(`/dashboard/submit?company=${encodeURIComponent(companyName)}`)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    return date.toLocaleDateString()
   }
 
   return (
     <div className="space-y-6">
       {/* Add Review/Question Button */}
       <div className="flex justify-end">
-        <Button className="bg-primary hover:bg-primary/90" onClick={handleAddReview}>
+        <Button className="bg-primary hover:bg-primary/90" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Review / Question
         </Button>
@@ -276,206 +143,271 @@ export function CompanyTabs({ companyId, companyName }: CompanyTabsProps) {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="reviews" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            Reviews
+            Reviews ({reviewStats?.totalReviews || 0})
           </TabsTrigger>
           <TabsTrigger value="questions" className="flex items-center gap-2">
             <FileQuestion className="h-4 w-4" />
-            Questions
+            Questions ({questionStats?.totalQuestions || 0})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="reviews" className="space-y-6">
-          {/* Reviews Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {isLoadingReviews ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading reviews...</p>
+            </div>
+          ) : reviews.length === 0 ? (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-                <Star className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reviewsData.averageRating}/5</div>
-                <p className="text-xs text-muted-foreground">From {reviewsData.totalReviews} reviews</p>
+              <CardContent className="text-center py-12">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No Reviews Yet</h3>
+                <p className="text-muted-foreground mb-4">Be the first to share your interview experience!</p>
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Review
+                </Button>
               </CardContent>
             </Card>
+          ) : (
+            <>
+              {/* Reviews Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
+                    <Star className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{reviewStats?.averageRating?.toFixed(1) || 0}/5</div>
+                    <p className="text-xs text-muted-foreground">From {reviewStats?.totalReviews || 0} reviews</p>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Difficulty</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reviewsData.averageDifficulty}/5</div>
-                <Progress value={reviewsData.averageDifficulty * 20} className="mt-2" />
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Avg. Difficulty</CardTitle>
+                    <FileQuestion className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{reviewStats?.averageDifficulty?.toFixed(1) || 0}/3</div>
+                    <Progress value={(reviewStats?.averageDifficulty || 0) * 33.33} className="mt-2" />
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reviewsData.totalReviews}</div>
-                <p className="text-xs text-muted-foreground">Student experiences</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Pros and Cons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-green-600">Pros</CardTitle>
-                <CardDescription>What students liked</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {reviewsData.pros.map((pro, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full" />
-                      <span className="text-sm">{pro}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-red-600">Cons</CardTitle>
-                <CardDescription>Areas for improvement</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {reviewsData.cons.map((con, index) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full" />
-                      <span className="text-sm">{con}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Common Topics */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Common Interview Topics</CardTitle>
-              <CardDescription>Most frequently mentioned areas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {reviewsData.commonTopics.map((topic, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-2xl font-bold text-primary">{topic.frequency}%</div>
-                    <div className="text-sm text-muted-foreground">{topic.name}</div>
-                  </div>
-                ))}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{reviewStats?.totalReviews || 0}</div>
+                    <p className="text-xs text-muted-foreground">Student experiences</p>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Recent Reviews */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Reviews</CardTitle>
-              <CardDescription>Latest student experiences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {reviewsData.recentReviews.map((review) => (
-                <div key={review.id} className="border-b border-border pb-4 last:border-b-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{review.author}</span>
-                      <Badge variant="outline">{review.role}</Badge>
-                      <Badge className={getDifficultyColor(review.difficulty)}>{review.difficulty}</Badge>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {[...Array(review.rating)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">{review.summary}</p>
-                  <p className="text-xs text-muted-foreground">{review.date}</p>
+              {/* Pros and Cons */}
+              {(reviewStats?.commonPros?.length > 0 || reviewStats?.commonCons?.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {reviewStats?.commonPros?.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg text-green-600">Pros</CardTitle>
+                        <CardDescription>What students liked</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {reviewStats.commonPros.map((pro: string, index: number) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full" />
+                              <span className="text-sm">{pro}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {reviewStats?.commonCons?.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg text-red-600">Cons</CardTitle>
+                        <CardDescription>Areas for improvement</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {reviewStats.commonCons.map((con: string, index: number) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-red-500 rounded-full" />
+                              <span className="text-sm">{con}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              )}
 
-        <TabsContent value="questions" className="space-y-6">
-          {/* Questions Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Question Categories</CardTitle>
-              <CardDescription>{questionsData.totalQuestions} total questions available</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {questionsData.categories.map((category, index) => (
-                  <div key={index} className="text-center p-4 border border-border rounded-lg">
-                    <category.icon className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <div className="font-medium">{category.name}</div>
-                    <div className="text-sm text-muted-foreground">{category.count} questions</div>
-                    <Badge className={`${getDifficultyColor(category.difficulty)} mt-2`}>{category.difficulty}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Questions by Category */}
-          {questionsData.categories.map((category, categoryIndex) => (
-            <Card key={categoryIndex}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <category.icon className="h-5 w-5" />
-                  {category.name}
-                </CardTitle>
-                <CardDescription>{category.count} questions in this category</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-border">
-                  <ul className="space-y-0">
-                    {category.questions.slice(0, 5).map((question) => (
-                      <li key={question.id} className="p-4 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium flex-1 pr-4">{question.text}</h4>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge className={getDifficultyColor(question.difficulty)}>{question.difficulty}</Badge>
-                            <div className="text-sm text-muted-foreground">{question.frequency}% frequency</div>
-                          </div>
-                        </div>
+              {/* Recent Reviews */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Reviews</CardTitle>
+                  <CardDescription>Latest student experiences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {reviews.slice(0, 10).map((review: any) => (
+                    <div key={review._id} className="border-b border-border pb-4 last:border-b-0">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          {question.tags.map((tag, tagIndex) => (
-                            <Badge key={tagIndex} variant="outline" className="text-xs">
-                              {tag}
+                          <span className="font-medium">{review.studentName || 'Anonymous'}</span>
+                          <Badge variant="outline">{review.role}</Badge>
+                          <Badge className={getDifficultyColor(review.difficulty)}>{review.difficulty}</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[...Array(review.rating)].map((_, i) => (
+                            <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{review.summary}</p>
+                      {review.interviewTopics && review.interviewTopics.length > 0 && (
+                        <div className="flex gap-2 flex-wrap mb-2">
+                          {review.interviewTopics.map((topic: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {topic}
                             </Badge>
                           ))}
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                  {category.questions.length > 5 && (
-                    <div className="p-4 border-t border-border">
-                      <Link
-                        href={`/dashboard/topic/${encodeURIComponent(category.name)}?company=${encodeURIComponent(companyName)}`}
-                      >
-                        <Button variant="outline" className="w-full bg-transparent">
-                          Show More ({category.questions.length - 5} more questions)
-                          <ChevronRight className="h-4 w-4 ml-2" />
-                        </Button>
-                      </Link>
+                      )}
+                      <p className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</p>
                     </div>
-                  )}
-                </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="questions" className="space-y-6">
+          {isLoadingQuestions ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading questions...</p>
+            </div>
+          ) : questions.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <FileQuestion className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No Questions Yet</h3>
+                <p className="text-muted-foreground mb-4">Be the first to share interview questions!</p>
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Questions
+                </Button>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <>
+              {/* Questions Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Question Categories</CardTitle>
+                  <CardDescription>{questionStats?.totalQuestions || 0} total questions available</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {Object.keys(categoryIcons).map((categoryName) => {
+                      const Icon = categoryIcons[categoryName]
+                      const count = questionStats?.byCategory?.[categoryName] || 0
+                      const categoryQuestions = questionsByCategory[categoryName] || []
+                      const avgDifficulty = categoryQuestions.length > 0
+                        ? categoryQuestions.filter((q: any) => q.difficulty === 'Hard').length > categoryQuestions.length / 2
+                          ? 'Hard'
+                          : categoryQuestions.filter((q: any) => q.difficulty === 'Easy').length > categoryQuestions.length / 2
+                          ? 'Easy'
+                          : 'Medium'
+                        : 'Medium'
+
+                      return (
+                        <div key={categoryName} className="text-center p-4 border border-border rounded-lg">
+                          <Icon className="h-8 w-8 text-primary mx-auto mb-2" />
+                          <div className="font-medium text-sm">{categoryName}</div>
+                          <div className="text-sm text-muted-foreground">{count} questions</div>
+                          <Badge className={`${getDifficultyColor(avgDifficulty)} mt-2 text-xs`}>
+                            {avgDifficulty}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Questions by Category */}
+              {Object.entries(questionsByCategory).map(([categoryName, categoryQuestions]: [string, any]) => {
+                if (!Array.isArray(categoryQuestions) || categoryQuestions.length === 0) return null
+                const Icon = categoryIcons[categoryName] || FileQuestion
+
+                return (
+                  <Card key={categoryName}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Icon className="h-5 w-5" />
+                        {categoryName}
+                      </CardTitle>
+                      <CardDescription>{categoryQuestions.length} questions in this category</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-border">
+                        <ul className="space-y-0">
+                          {categoryQuestions.map((question: any) => (
+                            <li key={question._id} className="p-4 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-medium flex-1 pr-4">{question.questionText}</h4>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Badge className={getDifficultyColor(question.difficulty)}>
+                                    {question.difficulty}
+                                  </Badge>
+                                  {question.frequency && (
+                                    <div className="text-sm text-muted-foreground">{question.frequency}x</div>
+                                  )}
+                                </div>
+                              </div>
+                              {question.tags && question.tags.length > 0 && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {question.tags.map((tag: string, tagIndex: number) => (
+                                    <Badge key={tagIndex} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {question.answer && (
+                                <details className="mt-2">
+                                  <summary className="text-sm text-primary cursor-pointer">View Answer</summary>
+                                  <p className="text-sm text-muted-foreground mt-2 pl-4">{question.answer}</p>
+                                </details>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </>
+          )}
         </TabsContent>
       </Tabs>
+
+      <AddReviewQuestionDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        companyId={companyId}
+        companyName={companyName}
+        onSuccess={handleSuccess}
+      />
     </div>
   )
 }

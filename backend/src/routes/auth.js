@@ -26,7 +26,7 @@ const loginValidation = [
 ];
 
 const otpValidation = [
-  body('userId').isInt().withMessage('Valid user ID is required'),
+  body('userId').notEmpty().withMessage('User ID is required'),
   body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
 ];
 
@@ -92,6 +92,13 @@ router.post('/signup/student', signupValidation, async (req, res) => {
 
     // Send OTP email
     await sendOTPEmail(email, otp, name);
+
+    console.log('✅ Student signup OTP sent:', { 
+      tempUserId, 
+      email, 
+      otp, // For debugging - remove in production
+      expiresAt: new Date(otpExpiry).toISOString() 
+    });
 
     // Clean up old pending signups (older than 15 minutes)
     const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
@@ -183,6 +190,14 @@ router.post('/signup/staff', signupValidation, async (req, res) => {
 
     // Send OTP email
     await sendOTPEmail(email, otp, name);
+
+    console.log('✅ Staff signup OTP sent:', { 
+      tempUserId, 
+      email, 
+      role,
+      otp, // For debugging - remove in production
+      expiresAt: new Date(otpExpiry).toISOString() 
+    });
 
     // Clean up old pending signups
     const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
@@ -368,6 +383,9 @@ router.post('/verify-otp', otpValidation, async (req, res) => {
 
     const { userId, otp } = req.body;
 
+    // Trim and normalize OTP
+    const normalizedOTP = String(otp).trim();
+
     // Check if this is a temporary user (pending signup)
     if (userId.startsWith('temp_')) {
       const pendingUser = pendingSignups.get(userId);
@@ -379,8 +397,13 @@ router.post('/verify-otp', otpValidation, async (req, res) => {
         });
       }
 
-      // Check OTP validity
-      if (pendingUser.otp !== otp) {
+      // Check OTP validity - compare as strings
+      if (String(pendingUser.otp).trim() !== normalizedOTP) {
+        console.log('❌ OTP Mismatch:', {
+          received: normalizedOTP,
+          expected: String(pendingUser.otp).trim(),
+          userId: userId
+        });
         return res.status(400).json({ 
           success: false, 
           message: 'Invalid OTP' 
@@ -389,6 +412,7 @@ router.post('/verify-otp', otpValidation, async (req, res) => {
 
       if (Date.now() > pendingUser.otpExpiry) {
         pendingSignups.delete(userId);
+        console.log('❌ OTP Expired for userId:', userId);
         return res.status(400).json({ 
           success: false, 
           message: 'OTP expired. Please sign up again.' 
@@ -396,6 +420,7 @@ router.post('/verify-otp', otpValidation, async (req, res) => {
       }
 
       // OTP is valid! Now create the user in database
+      console.log('✅ OTP Verified for:', pendingUser.email);
       try {
         const newUser = await User.create({
           name: pendingUser.name,
